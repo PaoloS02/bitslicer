@@ -33,6 +33,7 @@ namespace{
 		BitSlicer() : FunctionPass(ID) {}
 		std::vector<Instruction *> eraseList;
 		std::vector<AllocaInst *>  AllocInstBuff;
+		std::vector<StringRef> InstrNames;
 		
 		bool runOnFunction(Function &F){
 			int i;
@@ -41,6 +42,7 @@ namespace{
 				B.dump();
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
+					//errs() << "instr name: " << I.getName().str() << "\n";
 					if(isa<AllocaInst>(&I)){
 						INSTR_TYPE = 0;
 					}
@@ -53,17 +55,20 @@ namespace{
 					
 					switch(INSTR_TYPE){
 					
-						case 0:	auto *all = dyn_cast<AllocaInst>(&I);
+						case 0:	
+						{
+								auto *all = dyn_cast<AllocaInst>(&I);
 								
 								if(all->getAllocatedType()->isIntegerTy(8) ||
 									(all->getAllocatedType()->isArrayTy() && 
 									all->getAllocatedType()->getArrayElementType()->isIntegerTy(8))){
-									AllocInstBuff.push_back(all);
+									//AllocInstBuff.push_back(all);
 									AllocaInst *ret;
 									
 									for(i=0;i<8*CPU_BYTES;i++){
 										ret = builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced");
 										AllocInstBuff.push_back(ret);
+										InstrNames.push_back(ret->getName());
 										if(i==0)
 											all->replaceAllUsesWith(ret);
 										
@@ -72,14 +77,60 @@ namespace{
 									done = 1;
 									LAST_INSTR_TYPE = 0;
 								}
+						
 						break;
-						/*
-						case 1: auto *st = dyn_cast<StoreInst>(&I);
+						}
+						
+						case 1: 
+						{
+								auto *st = dyn_cast<StoreInst>(&I);
 								
 								if(st->getValueOperand()->getType()->isIntegerTy(8)){
+									int j=0;
+									Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
+									
+									Value *bit_index_value = ConstantInt::get(sliceTy, 0);
+									Value *bit_index_addr = builder.CreateAlloca(sliceTy, 0, "bit_index");
+									Value *bit_inc = ConstantInt::get(sliceTy, 1);
+									
+									builder.CreateStore(bit_index_value, bit_index_addr);
+									
+									for(auto &name: InstrNames){
+											if(st->getPointerOperand()->getName().equals(name)){
+												for(i=0;i<8;){
+													Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
+													Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
+													Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask);
+													Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
+													Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
+													builder.CreateStore(bit_index_inc, bit_index_addr);
+													i++;
+													builder.CreateStore(slice, AllocInstBuff.at(j));
+													j++; //the first name was found, I don't need any more to follow the outer
+												}		//loop, so I can use j to collect the 7 subsequent addresses I need.
+											}			//FIXME: what about the arrays? Shall wee keep it like their big jumps?
+											j++;
+										}
+										
+									/*if(!isa<Constant>(st->getValueOperand())){
+										for(auto &name: InstrNames){
+											if(st->getPointerOperand()->getName().equals(name)){
+												for(i=0;i<8*CPU_BYTES;i++){
+													builder.CreateStore(,);
+												}
+											}
+											j++;
+										}
+									}
+									*/
+									eraseList.push_back(&I);
+									done = 1;
+									LAST_INSTR_TYPE = 1;
 									
 								}
-						*/
+						break;
+						}
+						
 					}
 				}
 			}
