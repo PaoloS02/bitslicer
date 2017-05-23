@@ -26,22 +26,75 @@ namespace{
 	
 	struct BitSlicer : public FunctionPass{
 		static char ID;
+		//static int TYPE_OK;
+		static int INSTR_TYPE;
+		static int LAST_INSTR_TYPE;
+		static int done;
 		BitSlicer() : FunctionPass(ID) {}
 		std::vector<Instruction *> eraseList;
+		std::vector<AllocaInst *>  AllocInstBuff;
 		
 		bool runOnFunction(Function &F){
+			int i;
 			for(BasicBlock& B : F){
 				errs() << "\nBLOCK:\n\n";
 				B.dump();
 				for(Instruction& I : B){
+					IRBuilder<> builder(&I);
+					if(isa<AllocaInst>(&I)){
+						INSTR_TYPE = 0;
+					}
+					else if(isa<StoreInst>(&I)){
+						INSTR_TYPE = 1;
+					}
+					else{
+						INSTR_TYPE = 2;
+					}
+					
+					switch(INSTR_TYPE){
+					
+						case 0:	auto *all = dyn_cast<AllocaInst>(&I);
+								/*
+								if(all->getAllocatedType()->isArrayTy()){
+									errs() << "A: ";
+									all->getAllocatedType()->dump();
+									all->getAllocatedType()->getScalarType()->dump();
+									all->getAllocatedType()->getArrayElementType()->dump();
+									}
+								*/	
+								if(all->getAllocatedType()->isIntegerTy(8) ||
+									(all->getAllocatedType()->isArrayTy() && 
+									all->getAllocatedType()->getArrayElementType()->isIntegerTy(8))){
+									//std::vector<AllocaInst> *ret
+									for(i=0;i<8*CPU_BYTES;i++){
+										AllocInstBuff.push_back(builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced"));
+										//interInstrBuff.push_back(ret);
+									}
+									eraseList.push_back(&I);
+									done = 1;
+									LAST_INSTR_TYPE = 0;
+								}
+						break;
+						
 					}
 				}
-			return false;
 			}
-		};
+			for(auto &EI: eraseList){
+				EI -> eraseFromParent();
+			}
+			
+			if(done)
+				return true;
+			return false;
+		}
+	};
 }
 
 char BitSlicer::ID = 0;
+//int BitSlicer::TYPE_OK = 0;
+int BitSlicer::INSTR_TYPE = 0;
+int BitSlicer::LAST_INSTR_TYPE = 0;
+int BitSlicer::done = 0;
 
 static void registerBitSlicerPass(const PassManagerBuilder &,
                          legacy::PassManagerBase &PM) {
