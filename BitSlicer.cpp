@@ -100,7 +100,7 @@ namespace{
 												for(i=0;i<8;){
 													Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
 													Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
-													Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask);
+													Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
 													Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
 													Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
 													builder.CreateStore(bit_index_inc, bit_index_addr);
