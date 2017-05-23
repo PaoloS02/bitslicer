@@ -54,28 +54,32 @@ namespace{
 					switch(INSTR_TYPE){
 					
 						case 0:	auto *all = dyn_cast<AllocaInst>(&I);
-								/*
-								if(all->getAllocatedType()->isArrayTy()){
-									errs() << "A: ";
-									all->getAllocatedType()->dump();
-									all->getAllocatedType()->getScalarType()->dump();
-									all->getAllocatedType()->getArrayElementType()->dump();
-									}
-								*/	
+								
 								if(all->getAllocatedType()->isIntegerTy(8) ||
 									(all->getAllocatedType()->isArrayTy() && 
 									all->getAllocatedType()->getArrayElementType()->isIntegerTy(8))){
-									//std::vector<AllocaInst> *ret
+									AllocInstBuff.push_back(all);
+									AllocaInst *ret;
+									
 									for(i=0;i<8*CPU_BYTES;i++){
-										AllocInstBuff.push_back(builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced"));
-										//interInstrBuff.push_back(ret);
+										ret = builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced");
+										AllocInstBuff.push_back(ret);
+										if(i==0)
+											all->replaceAllUsesWith(ret);
+										
 									}
 									eraseList.push_back(&I);
 									done = 1;
 									LAST_INSTR_TYPE = 0;
 								}
 						break;
-						
+						/*
+						case 1: auto *st = dyn_cast<StoreInst>(&I);
+								
+								if(st->getValueOperand()->getType()->isIntegerTy(8)){
+									
+								}
+						*/
 					}
 				}
 			}
