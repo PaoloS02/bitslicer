@@ -33,7 +33,11 @@ namespace{
 		BitSlicer() : FunctionPass(ID) {}
 		std::vector<Instruction *> eraseList;
 		std::vector<AllocaInst *>  AllocInstBuff;
-		std::vector<StringRef> InstrNames;
+		std::vector<LoadInst *> LoadInstBuff;
+		
+		std::vector<StringRef> AllocNames;
+		std::vector<StringRef> LoadNames;
+		
 		
 		bool runOnFunction(Function &F){
 			int i;
@@ -49,8 +53,11 @@ namespace{
 					else if(isa<StoreInst>(&I)){
 						INSTR_TYPE = 1;
 					}
-					else{
+					else if(isa<LoadInst>(&I)){
 						INSTR_TYPE = 2;
+					}
+					else{
+						INSTR_TYPE = 3;
 					}
 					
 					switch(INSTR_TYPE){
@@ -68,7 +75,7 @@ namespace{
 									for(i=0;i<8*CPU_BYTES;i++){
 										ret = builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced");
 										AllocInstBuff.push_back(ret);
-										InstrNames.push_back(ret->getName());
+										AllocNames.push_back(ret->getName());
 										if(i==0)
 											all->replaceAllUsesWith(ret);
 										
@@ -86,16 +93,18 @@ namespace{
 								auto *st = dyn_cast<StoreInst>(&I);
 								
 								if(st->getValueOperand()->getType()->isIntegerTy(8)){
-									int j=0;
-									Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
+									int j=0, k=0;
 									
-									Value *bit_index_value = ConstantInt::get(sliceTy, 0);
-									Value *bit_index_addr = builder.CreateAlloca(sliceTy, 0, "bit_index");
-									Value *bit_inc = ConstantInt::get(sliceTy, 1);
+									if(isa<Constant>(st->getValueOperand())){
+										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
 									
-									builder.CreateStore(bit_index_value, bit_index_addr);
+										Value *bit_index_value = ConstantInt::get(sliceTy, 0);
+										Value *bit_index_addr = builder.CreateAlloca(sliceTy, 0, "bit_index");
+										Value *bit_inc = ConstantInt::get(sliceTy, 1);
 									
-									for(auto &name: InstrNames){
+										builder.CreateStore(bit_index_value, bit_index_addr);
+										
+										for(auto &name: AllocNames){
 											if(st->getPointerOperand()->getName().equals(name)){
 												for(i=0;i<8;){
 													Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
@@ -112,8 +121,36 @@ namespace{
 											j++;
 										}
 										
+									}else{
+										j = 0;
+										k = 0;
+										int found = 0;
+										
+										for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
+											val_name!=LoadNames.end(); val_name++, k++){
+											if(st->getValueOperand()->getName().equals(*val_name)){
+												found = 1;
+												break;
+											}
+										}
+										
+										for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
+											ptr_name!=AllocNames.end(); ptr_name++, j++){
+											if(st->getPointerOperand()->getName().equals(*ptr_name)){
+												found = 1;
+												break;
+											}
+										}
+										
+										if(found){
+											for(i=0;i<8;i++,j++,k++){
+												builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
+											}		
+										}		
+									}
+										
 									/*if(!isa<Constant>(st->getValueOperand())){
-										for(auto &name: InstrNames){
+										for(auto &name: AllocNames){
 											if(st->getPointerOperand()->getName().equals(name)){
 												for(i=0;i<8*CPU_BYTES;i++){
 													builder.CreateStore(,);
@@ -127,6 +164,33 @@ namespace{
 									done = 1;
 									LAST_INSTR_TYPE = 1;
 									
+								}
+						break;
+						}
+						case 2:
+						{
+								auto *ld = dyn_cast<LoadInst>(&I);
+								int j=0;
+
+								if(ld->getType()->isIntegerTy(8)){
+
+									for(auto &name: AllocNames){
+										if(ld->getPointerOperand()->getName().equals(name)){
+											LoadInst *ret;
+											for(i=0;i<8;i++){
+												ret = builder.CreateLoad(AllocInstBuff.at(j), "bslicedReg");
+												LoadInstBuff.push_back(ret);
+												LoadNames.push_back(ret->getName());
+												j++;
+												if(i==0)
+													ld->replaceAllUsesWith(ret);
+											}
+										}
+										j++;
+									}
+								eraseList.push_back(&I);
+								done = 1;
+								LAST_INSTR_TYPE = 2;	
 								}
 						break;
 						}

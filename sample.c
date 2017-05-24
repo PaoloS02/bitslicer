@@ -7,10 +7,11 @@ int main(){
 	int i;
 	
 	v1 = 0xd4;
+	v2 = v1;
 	//v2 = v1<<2;
 	/*
 	for(i=0;i<8;i++){
-		A[i] = v2 + i;
+		v2 = A[i];
 	}
 	*/
 	return 0;
