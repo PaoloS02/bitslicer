@@ -124,25 +124,29 @@ namespace{
 									}else{
 										j = 0;
 										k = 0;
-										int found = 0;
+										int tmp = 0;
+										int v_found = 0, p_found;
 										
 										for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
-											val_name!=LoadNames.end(); val_name++, k++){
+											val_name!=LoadNames.end(); val_name++, tmp++){
 											if(st->getValueOperand()->getName().equals(*val_name)){
-												found = 1;
+												v_found = 1;
+												k = tmp;
 												break;
 											}
 										}
 										
+										tmp = 0;
 										for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
-											ptr_name!=AllocNames.end(); ptr_name++, j++){
+											ptr_name!=AllocNames.end(); ptr_name++, tmp++){
 											if(st->getPointerOperand()->getName().equals(*ptr_name)){
-												found = 1;
+												p_found = 1;
+												j = tmp;
 												break;
 											}
 										}
 										
-										if(found){
+										if(v_found && p_found){
 											for(i=0;i<8;i++,j++,k++){
 												builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
 											}		
