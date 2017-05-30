@@ -46,7 +46,12 @@ namespace{
 				B.dump();
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
-					//errs() << "instr name: " << I.getName().str() << "\n";
+					if(I.hasMetadata()){
+						
+						errs() << "!!!instr name: ";
+						I.dump();
+						
+						}
 					if(isa<AllocaInst>(&I)){
 						INSTR_TYPE = 0;
 					}
