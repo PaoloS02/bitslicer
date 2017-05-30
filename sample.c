@@ -4,7 +4,7 @@
 
 int val __attribute__ ((aligned(8))) = 2;
 
-int foo(int num /*__attribute__((aligned(32)))*/, int num2){
+int foo(int num __attribute__((aligned(32))), int num2){
 	val = 5;
 	int g = val - num2;
 	return (num)*2;

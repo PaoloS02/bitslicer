@@ -2665,3 +2665,8 @@ def InternalLinkage : InheritableAttr {
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
   let Documentation = [InternalLinkageDocs];
 }
+
+def BitSliced : InheritableAttr {
+  let Spellings = [GNU<"bitsliced">];
+  
+}
