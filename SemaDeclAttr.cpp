@@ -6438,6 +6438,12 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case AttributeList::AT_XRayLogArgs:
     handleXRayLogArgsAttr(S, D, Attr);
     break;
+  
+  
+  
+  case AttributeList::AT_BitSliced:
+  	handleSimpleAttribute<BitSlicedAttr>(S, D, Attr);
+  	break;
   }
 }
 
