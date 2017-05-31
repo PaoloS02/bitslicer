@@ -2668,5 +2668,6 @@ def InternalLinkage : InheritableAttr {
 
 def BitSliced : InheritableAttr {
   let Spellings = [GNU<"bitsliced">];
-  
+  let Subjects = [Var];
+  let Documentation = [Undocumented];
 }
