@@ -47,7 +47,10 @@ namespace{
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
 					if(I.getMetadata("bitsliced")){
-						
+						for(auto& U : I.uses()){
+							User *user = U.getUser();
+							user->dump();
+						}
 						errs() << "!!!instr name: ";
 						I.dump();
 						

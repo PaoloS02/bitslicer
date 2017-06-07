@@ -1,0 +1,1 @@
+BitSliced: "bitsliced" in: Basic/Attr.td, Sema/SemaDeclAttr.cpp, CodeGen/CGDecl.cpp
