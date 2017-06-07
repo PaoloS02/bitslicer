@@ -1117,6 +1117,16 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   if (D.hasAttr<AnnotateAttr>())
     EmitVarAnnotations(&D, address.getPointer());
+  
+  if (D.hasAttr<BitSlicedAttr>()){
+  	llvm::LLVMContext& BSliceContext = address.getPointer()->getContext();
+  	llvm::MDNode *BSliceMDNode = llvm::MDNode::get(BSliceContext,
+  												   llvm::MDString::get(BSliceContext,
+  												   					   "bitsliced"));
+  	auto *BSliceInst = dyn_cast<llvm::AllocaInst>(address.getPointer());
+  	
+  	BSliceInst->setMetadata("bitsliced", BSliceMDNode);
+  }
 
   // Make sure we call @llvm.lifetime.end.
   if (emission.useLifetimeMarkers())
