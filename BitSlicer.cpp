@@ -42,11 +42,11 @@ namespace{
 		bool runOnFunction(Function &F){
 			int i;
 			for(BasicBlock& B : F){
-				errs() << "\nBLOCK:\n\n";
-				B.dump();
+				//errs() << "\nBLOCK:\n\n";
+				//B.dump();
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
-					if(I.hasMetadata()){
+					if(I.getMetadata("bitsliced")){
 						
 						errs() << "!!!instr name: ";
 						I.dump();
@@ -187,7 +187,7 @@ namespace{
 										if(ld->getPointerOperand()->getName().equals(name)){
 											LoadInst *ret;
 											for(i=0;i<8;i++){
-												ret = builder.CreateLoad(AllocInstBuff.at(j), "bslicedReg");
+												ret = builder.CreateLoad(AllocInstBuff.at(j), "BitSlicedReg");
 												LoadInstBuff.push_back(ret);
 												LoadNames.push_back(ret->getName());
 												j++;

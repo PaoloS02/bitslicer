@@ -13,7 +13,7 @@ int foo(int num __attribute__((aligned(32))), int num2){
 
 int main(){
 	uint8_t v1, v2, A[8];
-	int i __attribute__ ((aligned(16), bitsliced, annotate("bitslice"))) = 0;
+	int i __attribute__ ((aligned(16), bitsliced)) = 0;
 	
 	v1 = 0xd4;
 	v2 = v1;
