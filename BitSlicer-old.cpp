@@ -42,21 +42,17 @@ namespace{
 		bool runOnFunction(Function &F){
 			int i;
 			for(BasicBlock& B : F){
+				//errs() << "\nBLOCK:\n\n";
+				//B.dump();
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
 					if(I.getMetadata("bitsliced")){
 						for(auto& U : I.uses()){
 							User *user = U.getUser();
-							//user->dump();
-							auto *Inst = dyn_cast<Instruction>(user);
-							MDNode *mdata = MDNode::get(I.getContext(), 
-														MDString::get(I.getContext(), "bitsliced"));
-							Inst->setMetadata("bitsliced", mdata);
-							//errs() << "instr of the user: ";
-							//Inst->dump();
+							user->dump();
 						}
-						//errs() << "!!!instr name: ";
-						//I.dump();
+						errs() << "!!!instr name: ";
+						I.dump();
 						
 						}
 					if(isa<AllocaInst>(&I)){
@@ -85,26 +81,12 @@ namespace{
 									AllocaInst *ret;
 									
 									for(i=0;i<8*CPU_BYTES;i++){
-										MDNode *MData = MDNode::get(all->getContext(), 
-																	MDString::get(all->getContext(), "bitsliced"));
 										ret = builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced");
-										ret->setMetadata("bitsliced", MData);
 										AllocInstBuff.push_back(ret);
 										AllocNames.push_back(ret->getName());
-										if(i==0){
-											for(auto& U : all->uses()){
-												User *user = U.getUser();
-												//user->dump();
-												auto *Inst = dyn_cast<Instruction>(user);
-												MDNode *MDataDeriv = MDNode::get(all->getContext(), 
-																			MDString::get(all->getContext(), "bitsliced"));
-												Inst->setMetadata("bitsliced", MDataDeriv);
-												//errs() << "instr of the user: ";
-												//Inst->dump();
-											}
-											
+										if(i==0)
 											all->replaceAllUsesWith(ret);
-										}
+										
 									}
 									eraseList.push_back(&I);
 									done = 1;
@@ -208,27 +190,12 @@ namespace{
 										if(ld->getPointerOperand()->getName().equals(name)){
 											LoadInst *ret;
 											for(i=0;i<8;i++){
-												MDNode *MData = MDNode::get(ld->getContext(), 
-																	MDString::get(ld->getContext(), "bitsliced"));
 												ret = builder.CreateLoad(AllocInstBuff.at(j), "BitSlicedReg");
-												ret->setMetadata("bitsliced", MData);
 												LoadInstBuff.push_back(ret);
 												LoadNames.push_back(ret->getName());
 												j++;
-												if(i==0){
-													for(auto& U : ld->uses()){
-														User *user = U.getUser();
-														//user->dump();
-														auto *Inst = dyn_cast<Instruction>(user);
-														MDNode *MDataDeriv = MDNode::get(ld->getContext(), 
-																						MDString::get(ld->getContext(),
-																									 "bitsliced"));
-														Inst->setMetadata("bitsliced", MDataDeriv);
-														//errs() << "instr of the user: ";
-														//Inst->dump();
-													}
+												if(i==0)
 													ld->replaceAllUsesWith(ret);
-												}
 											}
 										}
 										j++;
@@ -242,7 +209,6 @@ namespace{
 						
 					}
 				}
-			B.dump();
 			}
 			for(auto &EI: eraseList){
 				EI -> eraseFromParent();

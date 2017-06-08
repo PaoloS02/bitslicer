@@ -1,31 +1,42 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <time.h>
 
 int val __attribute__ ((aligned(8), bitsliced)) = 2;
-
-int __attribute__ ((aligned(16), bitsliced)) foo(int num __attribute__((aligned(32), bitsliced)), uint8_t *A){
-	val = 5;
-	int g __attribute__ ((aligned(16), bitsliced)) = val;
-	return (num)*2;
+/*
+void encrypt(uint8_t *ptext, uint8_t *key){
+	int i;
+	
+	for(i=0; i<8; i++){
+		ptext[i] = ptext[i] ^ key[i+16];
+	}
 }
-
+*/
 
 int main(){
-	uint8_t v1, v2, A[8];
-	int i __attribute__ ((aligned(16), bitsliced)) = 0;
-	int a;
+	uint8_t __attribute__ ((bitsliced)) ptext[8];
+	uint8_t __attribute__ ((bitsliced)) Mkey[8];
+	uint8_t __attribute__ ((bitsliced)) v1;
+	int i;
+	//srand(time(NULL));
+	v1 = 0x04;
 	
-	v1 = 0xd4;
-	v2 = v1;
-	a = i+i;
-	a = A[i] + i;
-	//v2 = v1<<2;
+	for(i=0;i<8;i++){
+		ptext[i] = i*17;
+	}
 	
-	int s = foo(i,A);
+	for(i=0;i<10;i++){
+		Mkey[i] = 0x5a;
+	}
 	
-	s = i+1;
-	val = 3;
+	//encrypt(ptext, Mkey);
+	v1 = v1 * 2;
+	/*
+	for(i=0; i<8; i++){
+		ptext[i] = ptext[i] ^ Mkey[i+16];
+	}
+	*/
 	/*
 	for(i=0;i<8;i++){
 		v2 = A[i];
