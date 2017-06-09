@@ -245,6 +245,22 @@ namespace{
 						}
 						case 3:
 						{
+								int op_count = 0;
+								auto *gep = dyn_cast<GetElementPtrInst>(&I);
+								for(auto& op : I.operands()){
+									errs() << "op(" << op_count << "): ";
+									op.get()->dump();
+									
+									errs() << "check(" << op_count << "): ";
+									I.getOperand(op_count)->dump();
+									
+									errs() << "index(" << gep->getNumIndices() << "): ";
+									gep->getOperand(gep->getNumIndices())->dump();
+									
+									op_count++;
+								}
+								
+								/*
 								if(I.getMetadata("bitsliced")){
 									auto *gep = dyn_cast<GetElementPtrInst>(&I);
 									int j = 0;
@@ -253,14 +269,33 @@ namespace{
 											GetElementPtrInst *ret;
 											
 											for(i=0;i<8;i++){
-												ret = builder.CreateGEP(AllocInstBuff.at(j),);
+												MDNode *MData = MDNode::get(gep->getContext(), 
+																			MDString::get(gep->getContext(), "bitsliced"));
+												ret = builder.CreateGEP(AllocInstBuff.at(j+i),
+																		gep->getOperand(gep->getNumIndices()));
+												ret->setMetadata("bitsliced", MData);
+												GEPInstBuff.push_back(ret);
+												GEPNames.push_back(ret->getName());
 												
 											}
+											for(auto& U : gep->uses()){
+												User *user = U.getUser();
+												//user->dump();
+												auto *Inst = dyn_cast<Instruction>(user);
+												MDNode *MDataDeriv = MDNode::get(gep->getContext(), 
+																				MDString::get(gep->getContext(),
+																							 "bitsliced"));
+												Inst->setMetadata("bitsliced", MDataDeriv);
+												//errs() << "instr of the user: ";
+												//Inst->dump();
+											}
+											gep->replaceAllUsesWith(ret);
+											
 										}
 										j++;	
 									}
 								}
-								
+								*/
 						break;		
 						}
 						
