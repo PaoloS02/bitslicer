@@ -34,10 +34,11 @@ namespace{
 		std::vector<Instruction *> eraseList;
 		std::vector<AllocaInst *>  AllocInstBuff;
 		std::vector<LoadInst *> LoadInstBuff;
+		std::vector<GetElementPtrInst> GEPInstBuff;
 		
 		std::vector<StringRef> AllocNames;
 		std::vector<StringRef> LoadNames;
-		
+		std::vector<StringRef> GEPNames;
 		
 		bool runOnFunction(Function &F){
 			int i;
@@ -68,8 +69,11 @@ namespace{
 					else if(isa<LoadInst>(&I)){
 						INSTR_TYPE = 2;
 					}
-					else{
+					else if(isa<GetElementPtrInst>(&I)){
 						INSTR_TYPE = 3;
+					}
+					else{
+						INSTR_TYPE = 4;
 					}
 					
 					switch(INSTR_TYPE){
@@ -238,6 +242,26 @@ namespace{
 								LAST_INSTR_TYPE = 2;	
 								}
 						break;
+						}
+						case 3:
+						{
+								if(I.getMetadata("bitsliced")){
+									auto *gep = dyn_cast<GetElementPtrInst>(&I);
+									int j = 0;
+									for(auto &name: AllocNames){
+										if(gep->getPointerOperand()->getName().equals(name)){
+											GetElementPtrInst *ret;
+											
+											for(i=0;i<8;i++){
+												ret = builder.CreateGEP(AllocInstBuff.at(j),);
+												
+											}
+										}
+										j++;	
+									}
+								}
+								
+						break;		
 						}
 						
 					}
