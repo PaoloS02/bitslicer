@@ -34,7 +34,7 @@ namespace{
 		std::vector<Instruction *> eraseList;
 		std::vector<AllocaInst *>  AllocInstBuff;
 		std::vector<LoadInst *> LoadInstBuff;
-		std::vector<GetElementPtrInst> GEPInstBuff;
+		std::vector<GetElementPtrInst *> GEPInstBuff;
 		
 		std::vector<StringRef> AllocNames;
 		std::vector<StringRef> LoadNames;
@@ -124,7 +124,9 @@ namespace{
 								
 								if(st->getValueOperand()->getType()->isIntegerTy(8)){
 									int j=0, k=0;
-									
+									errs() << "store pointer: ";
+									st->getPointerOperand()->getType()->dump();
+									st->dump();
 									if(isa<Constant>(st->getValueOperand())){
 										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
 									
@@ -155,12 +157,14 @@ namespace{
 										j = 0;
 										k = 0;
 										int tmp = 0;
-										int v_found = 0, p_found;
+										int v_found = 0, p_found = 0;
+										int v_type = 0, p_type = 0;
 										
 										for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
 											val_name!=LoadNames.end(); val_name++, tmp++){
 											if(st->getValueOperand()->getName().equals(*val_name)){
 												v_found = 1;
+												v_type = 0;
 												k = tmp;
 												break;
 											}
@@ -171,15 +175,42 @@ namespace{
 											ptr_name!=AllocNames.end(); ptr_name++, tmp++){
 											if(st->getPointerOperand()->getName().equals(*ptr_name)){
 												p_found = 1;
+												p_type = 0;
+												
+												j = tmp;
+												break;
+											}
+										}
+										
+										tmp = 0;
+										for(std::vector<StringRef>::iterator ptr_name=GEPNames.begin(); 
+											ptr_name!=GEPNames.end(); ptr_name++, tmp++){
+											if(st->getPointerOperand()->getName().equals(*ptr_name)){
+												p_found = 1;
+												p_type = 1;
+												
 												j = tmp;
 												break;
 											}
 										}
 										
 										if(v_found && p_found){
-											for(i=0;i<8;i++,j++,k++){
-												builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
-											}		
+											
+											if((v_type == 0) && (p_type == 0)){
+												for(i=0;i<8;i++,j++,k++){
+													builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
+												}
+											}
+											if((v_type == 0) && (p_type == 1)){
+												for(i=0;i<8;i++,j++,k++){
+													builder.CreateStore(LoadInstBuff.at(k), GEPInstBuff.at(j));
+												}
+											}
+												
+										}else{
+											errs() << "Error instruction:";
+											I.dump();
+											errs() << "No matches in the names vectors";
 										}		
 									}
 										
@@ -260,42 +291,53 @@ namespace{
 									op_count++;
 								}
 								
-								/*
+								
 								if(I.getMetadata("bitsliced")){
 									auto *gep = dyn_cast<GetElementPtrInst>(&I);
 									int j = 0;
 									for(auto &name: AllocNames){
 										if(gep->getPointerOperand()->getName().equals(name)){
-											GetElementPtrInst *ret;
+											Value *ret;
+											
 											
 											for(i=0;i<8;i++){
 												MDNode *MData = MDNode::get(gep->getContext(), 
 																			MDString::get(gep->getContext(), "bitsliced"));
 												ret = builder.CreateGEP(AllocInstBuff.at(j+i),
 																		gep->getOperand(gep->getNumIndices()));
-												ret->setMetadata("bitsliced", MData);
-												GEPInstBuff.push_back(ret);
-												GEPNames.push_back(ret->getName());
+												errs() << "new pointer type: ";
+												ret->getType()->dump();
+												auto *newGEP = dyn_cast<GetElementPtrInst>(ret);
+												newGEP->setMetadata("bitsliced", MData);
+												GEPInstBuff.push_back(newGEP);
+												GEPNames.push_back(newGEP->getName());
 												
+												/*
+												if(i==0){
+													for(auto& U : gep->uses()){
+														User *user = U.getUser();
+														//user->dump();
+														auto *Inst = dyn_cast<Instruction>(user);
+														MDNode *MDataDeriv = MDNode::get(gep->getContext(), 
+																						MDString::get(gep->getContext(),
+																									 "bitsliced"));
+														Inst->setMetadata("bitsliced", MDataDeriv);
+														//errs() << "instr of the user: ";
+														//Inst->dump();
+													}
+													gep->replaceAllUsesWith(ret);
+												}
+												*/
 											}
-											for(auto& U : gep->uses()){
-												User *user = U.getUser();
-												//user->dump();
-												auto *Inst = dyn_cast<Instruction>(user);
-												MDNode *MDataDeriv = MDNode::get(gep->getContext(), 
-																				MDString::get(gep->getContext(),
-																							 "bitsliced"));
-												Inst->setMetadata("bitsliced", MDataDeriv);
-												//errs() << "instr of the user: ";
-												//Inst->dump();
-											}
-											gep->replaceAllUsesWith(ret);
+											
+											
+											
 											
 										}
 										j++;	
 									}
 								}
-								*/
+								
 						break;		
 						}
 						
