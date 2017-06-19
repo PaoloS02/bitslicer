@@ -53,33 +53,45 @@ namespace{
 							MDNode *mdata = MDNode::get(I.getContext(), 
 														MDString::get(I.getContext(), "bitsliced"));
 							Inst->setMetadata("bitsliced", mdata);
-							//errs() << "instr of the user: ";
-							//Inst->dump();
 						}
-						//errs() << "!!!instr name: ";
-						//I.dump();
 						
+						/*
+						for(auto& op : I.operands()){
+							auto *op_inst = dyn_cast<Instruction>(&op);
+							MDNode *mdata = MDNode::get(I.getContext(), 
+														MDString::get(I.getContext(), "bitsliced"));
+							op_inst->setMetadata("bitsliced", mdata);
+							/*
+							for(auto& op_use : op.get()->uses()){
+								User *op_user = op_use.getUser();
+								op_inst = dyn_cast<Instruction>(op_user);
+								mdata = MDNode::get(op.get()->getContext(), 
+													MDString::get(op.get()->getContext(), "bitsliced"));
+								op_inst->setMetadata("bitsliced", mdata);
+							}
+							*/
+					//	}
+					
+						if(isa<AllocaInst>(&I)){
+							INSTR_TYPE = 0;
 						}
-					if(isa<AllocaInst>(&I)){
-						INSTR_TYPE = 0;
-					}
-					else if(isa<StoreInst>(&I)){
-						INSTR_TYPE = 1;
-					}
-					else if(isa<LoadInst>(&I)){
-						INSTR_TYPE = 2;
-					}
-					else if(isa<GetElementPtrInst>(&I)){
-						INSTR_TYPE = 3;
-					}
-					else{
-						INSTR_TYPE = 4;
-					}
+						else if(isa<StoreInst>(&I)){
+							INSTR_TYPE = 1;
+						}
+						else if(isa<LoadInst>(&I)){
+							INSTR_TYPE = 2;
+						}
+						else if(isa<GetElementPtrInst>(&I)){
+							INSTR_TYPE = 3;
+						}
+						else{
+							INSTR_TYPE = 4;
+						}
+						
+						switch(INSTR_TYPE){
 					
-					switch(INSTR_TYPE){
-					
-						case 0:	
-						{
+							case 0:	
+							{
 								auto *all = dyn_cast<AllocaInst>(&I);
 								
 								if(all->getAllocatedType()->isIntegerTy(8) ||
@@ -96,6 +108,7 @@ namespace{
 										AllocInstBuff.push_back(ret);
 										AllocNames.push_back(ret->getName());
 										if(i==0){
+										/*
 											for(auto& U : all->uses()){
 												User *user = U.getUser();
 												//user->dump();
@@ -106,7 +119,7 @@ namespace{
 												//errs() << "instr of the user: ";
 												//Inst->dump();
 											}
-											
+										*/
 											all->replaceAllUsesWith(ret);
 										}
 									}
@@ -115,19 +128,20 @@ namespace{
 									LAST_INSTR_TYPE = 0;
 								}
 						
-						break;
-						}
+							break;
+							}
 						
-						case 1: 
-						{
-								auto *st = dyn_cast<StoreInst>(&I);
-								
-								if(st->getValueOperand()->getType()->isIntegerTy(8)){
-									int j=0, k=0;
-									errs() << "store pointer: ";
-									st->getPointerOperand()->getType()->dump();
-									st->dump();
+							case 1: 
+							{
+									auto *st = dyn_cast<StoreInst>(&I);
+									
 									if(isa<Constant>(st->getValueOperand())){
+										
+										int j=0;
+										errs() << "store pointer: ";
+										st->getPointerOperand()->getType()->dump();
+										st->dump();
+									
 										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
 									
 										Value *bit_index_value = ConstantInt::get(sliceTy, 0);
@@ -185,8 +199,7 @@ namespace{
 										}	
 											
 									}else{
-										j = 0;
-										k = 0;
+										int j=0, k=0;
 										int tmp = 0;
 										int v_found = 0, p_found = 0;
 										int v_type = 0, p_type = 0;
@@ -260,16 +273,15 @@ namespace{
 									done = 1;
 									LAST_INSTR_TYPE = 1;
 									
-								}
-						break;
-						}
-						case 2:
-						{
-								auto *ld = dyn_cast<LoadInst>(&I);
-								int j=0;
+								
+							break;
+							}
+							case 2:
+							{
+									auto *ld = dyn_cast<LoadInst>(&I);
+									int j=0;
 
-								if(ld->getType()->isIntegerTy(8)){
-
+								
 									for(auto &name: AllocNames){
 										if(ld->getPointerOperand()->getName().equals(name)){
 											LoadInst *ret;
@@ -282,6 +294,7 @@ namespace{
 												LoadNames.push_back(ret->getName());
 												j++;
 												if(i==0){
+												/*
 													for(auto& U : ld->uses()){
 														User *user = U.getUser();
 														//user->dump();
@@ -293,6 +306,7 @@ namespace{
 														//errs() << "instr of the user: ";
 														//Inst->dump();
 													}
+												*/
 													ld->replaceAllUsesWith(ret);
 												}
 											}
@@ -302,11 +316,11 @@ namespace{
 								eraseList.push_back(&I);
 								done = 1;
 								LAST_INSTR_TYPE = 2;	
-								}
-						break;
-						}
-						case 3:
-						{
+								
+							break;
+							}
+							case 3:
+							{
 								
 								//auto *gep = dyn_cast<GetElementPtrInst>(&I);
 								
@@ -355,6 +369,7 @@ namespace{
 												
 												
 												if(i==0){
+												/*
 													for(auto& U : gep->uses()){
 														User *user = U.getUser();
 														//user->dump();
@@ -366,6 +381,7 @@ namespace{
 														//errs() << "instr of the user: ";
 														//Inst->dump();
 													}
+												*/
 													gep->replaceAllUsesWith(ret);
 												}
 												
@@ -379,9 +395,10 @@ namespace{
 									LAST_INSTR_TYPE = 3;	
 								}
 								
-						break;		
-						}
+							break;		
+							}
 						
+						}
 					}
 				}
 			B.dump();
@@ -393,9 +410,9 @@ namespace{
 			if(done)
 				return true;
 			return false;
-		}
-	};
-}
+		}	//runOnFunction
+	};	//class FunctionPass
+} //namespace
 
 char BitSlicer::ID = 0;
 //int BitSlicer::TYPE_OK = 0;
