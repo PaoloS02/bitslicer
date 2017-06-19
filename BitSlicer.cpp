@@ -133,26 +133,57 @@ namespace{
 										Value *bit_index_value = ConstantInt::get(sliceTy, 0);
 										Value *bit_index_addr = builder.CreateAlloca(sliceTy, 0, "bit_index");
 										Value *bit_inc = ConstantInt::get(sliceTy, 1);
+									errs() << "costante!!";
+									st->getValueOperand()->dump();
 									
+										int p_found = 0;
+										int p_type = 0;
+										int p_tmp = 0;
+										
 										builder.CreateStore(bit_index_value, bit_index_addr);
 										
 										for(auto &name: AllocNames){
 											if(st->getPointerOperand()->getName().equals(name)){
-												for(i=0;i<8;){
-													Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
-													Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
-													Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
-													Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
-													Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
-													builder.CreateStore(bit_index_inc, bit_index_addr);
-													i++;
-													builder.CreateStore(slice, AllocInstBuff.at(j));
-													j++; //the first name was found, I don't need any more to follow the outer
-												}		//loop, so I can use j to collect the 7 subsequent addresses I need.
-											}			//FIXME: what about the arrays? Shall wee keep it like their big jumps?
-											j++;
+												p_found = 1;
+												p_type = 0;
+												j = p_tmp;
+												break;
+											}
+											p_tmp++;
 										}
 										
+										p_tmp = 0;
+										for(auto &name: GEPNames){
+											if(st->getPointerOperand()->getName().equals(name)){
+												p_found = 1;
+												p_type = 1;
+												j = p_tmp;
+												break;
+											}
+											p_tmp++;
+										}
+												
+										if(p_found){
+											for(i=0;i<8;){
+												Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
+												Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
+												Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
+												Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
+												Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
+												builder.CreateStore(bit_index_inc, bit_index_addr);
+												i++;
+											
+												if(p_type == 0)
+													builder.CreateStore(slice, AllocInstBuff.at(j));
+												
+												if(p_type == 1)
+													builder.CreateStore(slice, GEPInstBuff.at(j));
+													
+												j++; 	//the first name was found, I don't need any more to follow the outer
+												}		//loop, so I can use j to collect the 7 subsequent addresses I need.
+														//FIXME: what about the arrays? Shall wee keep it like their big jumps?
+										}	
+											
 									}else{
 										j = 0;
 										k = 0;
@@ -194,7 +225,7 @@ namespace{
 											}
 										}
 										
-										if(v_found && p_found){
+										if((v_found == 1) && (p_found == 1)){
 											
 											if((v_type == 0) && (p_type == 0)){
 												for(i=0;i<8;i++,j++,k++){
@@ -210,7 +241,7 @@ namespace{
 										}else{
 											errs() << "Error instruction:";
 											I.dump();
-											errs() << "No matches in the names vectors";
+											errs() << "No matches in the names vectors. v and p: " << v_found << " " << p_found;
 										}		
 									}
 										
@@ -276,8 +307,12 @@ namespace{
 						}
 						case 3:
 						{
+								
+								//auto *gep = dyn_cast<GetElementPtrInst>(&I);
+								
+								
+								/*
 								int op_count = 0;
-								auto *gep = dyn_cast<GetElementPtrInst>(&I);
 								for(auto& op : I.operands()){
 									errs() << "op(" << op_count << "): ";
 									op.get()->dump();
@@ -290,7 +325,7 @@ namespace{
 									
 									op_count++;
 								}
-								
+								*/
 								
 								if(I.getMetadata("bitsliced")){
 									auto *gep = dyn_cast<GetElementPtrInst>(&I);
@@ -298,13 +333,19 @@ namespace{
 									for(auto &name: AllocNames){
 										if(gep->getPointerOperand()->getName().equals(name)){
 											Value *ret;
-											
+											std::vector <Value *> idxs;
+											for(llvm::User::op_iterator idx=gep->idx_begin();
+												idx!=gep->idx_end();
+												idx++){
+													idxs.push_back(gep->getOperand(idx->getOperandNo()));
+												}
 											
 											for(i=0;i<8;i++){
 												MDNode *MData = MDNode::get(gep->getContext(), 
 																			MDString::get(gep->getContext(), "bitsliced"));
-												ret = builder.CreateGEP(AllocInstBuff.at(j+i),
-																		gep->getOperand(gep->getNumIndices()));
+												ret = builder.CreateInBoundsGEP(AllocInstBuff.at(j+i),
+																		ArrayRef <Value *>(idxs),
+																		"bslicedGEP");
 												errs() << "new pointer type: ";
 												ret->getType()->dump();
 												auto *newGEP = dyn_cast<GetElementPtrInst>(ret);
@@ -312,7 +353,7 @@ namespace{
 												GEPInstBuff.push_back(newGEP);
 												GEPNames.push_back(newGEP->getName());
 												
-												/*
+												
 												if(i==0){
 													for(auto& U : gep->uses()){
 														User *user = U.getUser();
@@ -327,15 +368,15 @@ namespace{
 													}
 													gep->replaceAllUsesWith(ret);
 												}
-												*/
+												
 											}
-											
-											
-											
-											
+												
 										}
 										j++;	
 									}
+									eraseList.push_back(&I);
+									done = 1;
+									LAST_INSTR_TYPE = 3;	
 								}
 								
 						break;		
