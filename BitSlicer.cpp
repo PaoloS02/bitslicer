@@ -22,6 +22,21 @@
 
 using namespace llvm;
 
+int searchInstByName(std::vector<StringRef> nameVector, StringRef name){
+	int i = 0;
+	int found = 0;
+	for (std::vector<StringRef>::iterator nm = nameVector.begin(); nm!=nameVector.end(); 
+																   nm++, i++){
+		if (name.equals(*nm))
+			found = 1;
+	}
+	
+	if(found)
+		return i;
+	else
+		return -1;
+}
+
 namespace{
 	
 	struct BitSlicer : public FunctionPass{
@@ -135,8 +150,81 @@ namespace{
 							{
 									auto *st = dyn_cast<StoreInst>(&I);
 									
-									if(isa<Constant>(st->getValueOperand())){
+								//	if(!isa<Constant>(st->getValueOperand())){
+										int j=0, k=0;
+										int tmp = 0;
+										int v_found = 0, p_found = 0;
+										int v_type = -1, p_type = -1;
 										
+										for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
+											val_name!=LoadNames.end(); val_name++, tmp++){
+											if(st->getValueOperand()->getName().equals(*val_name)){
+												v_found = 1;
+												v_type = 0;
+												k = tmp;
+												break;
+											}
+										}
+										
+										tmp = 0;
+										for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
+											ptr_name!=AllocNames.end(); ptr_name++, tmp++){
+											if(st->getPointerOperand()->getName().equals(*ptr_name)){
+												p_found = 1;
+												p_type = 0;
+												
+												j = tmp;
+												break;
+											}
+										}
+										
+										tmp = 0;
+										for(std::vector<StringRef>::iterator ptr_name=GEPNames.begin(); 
+											ptr_name!=GEPNames.end(); ptr_name++, tmp++){
+											if(st->getPointerOperand()->getName().equals(*ptr_name)){
+												p_found = 1;
+												p_type = 1;
+												
+												j = tmp;
+												break;
+											}
+										}
+										/*
+										k = searchInstByName(LoadNames, st->getValueOperand()->getName());
+										
+										if( k >=0 )
+											v_type = 0;
+											
+										j = searchInstByName(AllocNames, st->getPtrOperand()->getName());
+										
+										if( j >= 0 )
+											p_type = 0;
+										
+										j = searchInstByName(GEPNames, st->getPtrOperand()->getName());
+										
+										if( j >= 0 )
+											p_type = 1;
+										*/
+									if(v_found && p_found){
+										if((v_type == 0) && (p_type == 0)){
+											for(i=0;i<8;i++,j++,k++){
+												builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
+											}
+										}
+										else if((v_type == 0) && (p_type == 1)){
+											for(i=0;i<8;i++,j++,k++){
+												builder.CreateStore(LoadInstBuff.at(k), GEPInstBuff.at(j));
+											}
+										}
+										else{
+											errs() << "Error instruction:";
+											I.dump();
+											errs() << "No matches in the names vectors. v and p: " << v_found << " " << p_found;
+										}
+									}	
+											
+								//	}else{
+									if(!v_found){	
 										int j=0;
 										errs() << "store pointer: ";
 										st->getPointerOperand()->getType()->dump();
@@ -197,65 +285,8 @@ namespace{
 												}		//loop, so I can use j to collect the 7 subsequent addresses I need.
 														//FIXME: what about the arrays? Shall wee keep it like their big jumps?
 										}	
+										
 											
-									}else{
-										int j=0, k=0;
-										int tmp = 0;
-										int v_found = 0, p_found = 0;
-										int v_type = 0, p_type = 0;
-										
-										for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
-											val_name!=LoadNames.end(); val_name++, tmp++){
-											if(st->getValueOperand()->getName().equals(*val_name)){
-												v_found = 1;
-												v_type = 0;
-												k = tmp;
-												break;
-											}
-										}
-										
-										tmp = 0;
-										for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
-											ptr_name!=AllocNames.end(); ptr_name++, tmp++){
-											if(st->getPointerOperand()->getName().equals(*ptr_name)){
-												p_found = 1;
-												p_type = 0;
-												
-												j = tmp;
-												break;
-											}
-										}
-										
-										tmp = 0;
-										for(std::vector<StringRef>::iterator ptr_name=GEPNames.begin(); 
-											ptr_name!=GEPNames.end(); ptr_name++, tmp++){
-											if(st->getPointerOperand()->getName().equals(*ptr_name)){
-												p_found = 1;
-												p_type = 1;
-												
-												j = tmp;
-												break;
-											}
-										}
-										
-										if((v_found == 1) && (p_found == 1)){
-											
-											if((v_type == 0) && (p_type == 0)){
-												for(i=0;i<8;i++,j++,k++){
-													builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
-												}
-											}
-											if((v_type == 0) && (p_type == 1)){
-												for(i=0;i<8;i++,j++,k++){
-													builder.CreateStore(LoadInstBuff.at(k), GEPInstBuff.at(j));
-												}
-											}
-												
-										}else{
-											errs() << "Error instruction:";
-											I.dump();
-											errs() << "No matches in the names vectors. v and p: " << v_found << " " << p_found;
-										}		
 									}
 										
 									/*if(!isa<Constant>(st->getValueOperand())){

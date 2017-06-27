@@ -32,6 +32,11 @@ int main(){
 	
 	//encrypt(ptext, Mkey);
 	v1 = v1 * 2;
+	
+	for(i=0; i<8; i++){
+		ptext[i] = Mkey[i+16];
+	}
+	
 	/*
 	for(i=0; i<8; i++){
 		ptext[i] = ptext[i] ^ Mkey[i+16];
