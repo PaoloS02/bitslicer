@@ -344,9 +344,43 @@ namespace{
 										}
 										j++;
 									}
-								eraseList.push_back(&I);
-								done = 1;
-								LAST_INSTR_TYPE = 2;	
+									
+									j = 0;
+									for(auto &name: GEPNames){
+										if(ld->getPointerOperand()->getName().equals(name)){
+											LoadInst *ret;
+											for(i=0;i<8;i++){
+												MDNode *MData = MDNode::get(ld->getContext(), 
+																	MDString::get(ld->getContext(), "bitsliced"));
+												ret = builder.CreateLoad(GEPInstBuff.at(j), "BitSlicedReg");
+												ret->setMetadata("bitsliced", MData);
+												LoadInstBuff.push_back(ret);
+												LoadNames.push_back(ret->getName());
+												j++;
+												if(i==0){
+												/*
+													for(auto& U : ld->uses()){
+														User *user = U.getUser();
+														//user->dump();
+														auto *Inst = dyn_cast<Instruction>(user);
+														MDNode *MDataDeriv = MDNode::get(ld->getContext(), 
+																						MDString::get(ld->getContext(),
+																									 "bitsliced"));
+														Inst->setMetadata("bitsliced", MDataDeriv);
+														//errs() << "instr of the user: ";
+														//Inst->dump();
+													}
+												*/
+													ld->replaceAllUsesWith(ret);
+												}
+											}
+										}
+										j++;
+									}
+									
+									eraseList.push_back(&I);
+									done = 1;
+									LAST_INSTR_TYPE = 2;	
 								
 							break;
 							}
