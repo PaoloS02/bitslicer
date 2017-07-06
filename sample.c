@@ -47,6 +47,14 @@ int main(){
 		v2 = A[i];
 	}
 	*/
+	
+	
+	ptext[3] = ((ptext[0] ^ 0xff) & (ptext[2] ^ 0xff) & (ptext[3] ^ 0xff)) |
+				((ptext[0] ^ 0xff) & ptext[2] & ptext[3]) |
+				((ptext[0] ^ 0xff)&ptext[1] & ptext[2] & (ptext[3] ^ 0xff)) |
+				(ptext[0] & (ptext[1] ^ 0xff)&ptext[3]) |
+				(ptext[0] & (ptext[1] ^ 0xff)&ptext[2] & (ptext[3] ^ 0xff));
+	
 	return 0;
 }
 
