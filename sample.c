@@ -37,11 +37,11 @@ int main(){
 		ptext[i] = Mkey[i+16];
 	}
 	
-	/*
+	
 	for(i=0; i<8; i++){
 		ptext[i] = ptext[i] ^ Mkey[i+16];
 	}
-	*/
+	
 	/*
 	for(i=0;i<8;i++){
 		v2 = A[i];
