@@ -61,6 +61,7 @@ namespace{
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
 					if(I.getMetadata("bitsliced")){
+						
 						for(auto& U : I.uses()){
 							User *user = U.getUser();
 							//user->dump();
@@ -224,8 +225,8 @@ namespace{
 									}	
 											
 								//	}else{
-									if(!v_found){	
-										int j=0;
+									if(!v_found && p_found){	
+										//int j=0;
 										errs() << "store pointer: ";
 										st->getPointerOperand()->getType()->dump();
 										st->dump();
@@ -235,15 +236,15 @@ namespace{
 										Value *bit_index_value = ConstantInt::get(sliceTy, 0);
 										Value *bit_index_addr = builder.CreateAlloca(sliceTy, 0, "bit_index");
 										Value *bit_inc = ConstantInt::get(sliceTy, 1);
-									errs() << "costante!!";
-									st->getValueOperand()->dump();
+								//	errs() << "costante!!";
+								//	st->getValueOperand()->dump();
 									
-										int p_found = 0;
-										int p_type = 0;
-										int p_tmp = 0;
+								//		int p_found = 0;
+								//		int p_type = 0;
+								//		int p_tmp = 0;
 										
 										builder.CreateStore(bit_index_value, bit_index_addr);
-										
+										/*
 										for(auto &name: AllocNames){
 											if(st->getPointerOperand()->getName().equals(name)){
 												p_found = 1;
@@ -264,8 +265,8 @@ namespace{
 											}
 											p_tmp++;
 										}
-												
-										if(p_found){
+										*/		
+										//if(p_found){
 											for(i=0;i<8;){
 												Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
 												Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
@@ -284,11 +285,26 @@ namespace{
 												j++; 	//the first name was found, I don't need any more to follow the outer
 												}		//loop, so I can use j to collect the 7 subsequent addresses I need.
 														//FIXME: what about the arrays? Shall wee keep it like their big jumps?
-										}	
+									//	}	
 										
 											
 									}
+									
+									if(v_found && !p_found){
+										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
+										Value *byte_value = ConstantInt::get(sliceTy, 0);
+										Value *byte_value_addr = builder.CreateAlloca(sliceTy, 0, "byte_value_address");
 										
+										for(i=0; i<8; i++){
+											byte_value = builder.CreateLoad(byte_value_addr, "byte_value");
+											Value *shift = ConstantInt::get(sliceTy, i);
+											Value *bit_shifted = builder.CreateShl(LoadInstBuff.at(k+i), shift);
+											byte_value = builder.CreateOr(byte_value, bit_shifted);
+											builder.CreateStore(byte_value, byte_value_addr);
+										}
+										
+										builder.CreateStore(byte_value, st->getPointerOperand());
+									}
 									/*if(!isa<Constant>(st->getValueOperand())){
 										for(auto &name: AllocNames){
 											if(st->getPointerOperand()->getName().equals(name)){

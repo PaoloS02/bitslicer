@@ -19,15 +19,25 @@ int main(){
 	uint8_t __attribute__ ((bitsliced)) Mkey[8];
 	uint8_t __attribute__ ((bitsliced)) v1;
 	int i;
+	uint8_t a, b;
+	uint8_t tmp[8];
+	a = 0;
+	b = a + 2;
 	//srand(time(NULL));
 	v1 = 0x04;
+	
+	for(i=0;i<8;i++){
+		a = a | tmp[i] << i;
+	}
+	
+	
 	
 	for(i=0;i<8;i++){
 		ptext[i] = i;
 	}
 	
 	for(i=0;i<10;i++){
-		Mkey[i] = 0x5a;
+		Mkey[i] = i;
 	}
 	
 	//encrypt(ptext, Mkey);
@@ -42,6 +52,8 @@ int main(){
 		ptext[i] = ptext[i] ^ Mkey[i+16];
 	}
 	
+	
+	
 	/*
 	for(i=0;i<8;i++){
 		v2 = A[i];
@@ -54,6 +66,12 @@ int main(){
 				((ptext[0] ^ 0xff)&ptext[1] & ptext[2] & (ptext[3] ^ 0xff)) |
 				(ptext[0] & (ptext[1] ^ 0xff)&ptext[3]) |
 				(ptext[0] & (ptext[1] ^ 0xff)&ptext[2] & (ptext[3] ^ 0xff));
+	
+	
+	a = Mkey[3];
+	b = Mkey[3];
+	
+	printf("a: %d\nb: %d\n", a, b);
 	
 	return 0;
 }
