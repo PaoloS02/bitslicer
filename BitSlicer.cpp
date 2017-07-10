@@ -71,21 +71,7 @@ namespace{
 							Inst->setMetadata("bitsliced", mdata);
 						}
 						
-						/*
-						for(auto& op : I.operands()){
-							auto *op_inst = dyn_cast<Instruction>(&op);
-							MDNode *mdata = MDNode::get(I.getContext(), 
-														MDString::get(I.getContext(), "bitsliced"));
-							op_inst->setMetadata("bitsliced", mdata);
-							/*
-							for(auto& op_use : op.get()->uses()){
-								User *op_user = op_use.getUser();
-								op_inst = dyn_cast<Instruction>(op_user);
-								mdata = MDNode::get(op.get()->getContext(), 
-													MDString::get(op.get()->getContext(), "bitsliced"));
-								op_inst->setMetadata("bitsliced", mdata);
-							}
-							*/
+						
 					//	}
 					
 						if(isa<AllocaInst>(&I)){
@@ -124,18 +110,7 @@ namespace{
 										AllocInstBuff.push_back(ret);
 										AllocNames.push_back(ret->getName());
 										if(i==0){
-										/*
-											for(auto& U : all->uses()){
-												User *user = U.getUser();
-												//user->dump();
-												auto *Inst = dyn_cast<Instruction>(user);
-												MDNode *MDataDeriv = MDNode::get(all->getContext(), 
-																			MDString::get(all->getContext(), "bitsliced"));
-												Inst->setMetadata("bitsliced", MDataDeriv);
-												//errs() << "instr of the user: ";
-												//Inst->dump();
-											}
-										*/
+										
 											all->replaceAllUsesWith(ret);
 										}
 									}
@@ -190,22 +165,8 @@ namespace{
 												break;
 											}
 										}
-										/*
-										k = searchInstByName(LoadNames, st->getValueOperand()->getName());
 										
-										if( k >=0 )
-											v_type = 0;
-											
-										j = searchInstByName(AllocNames, st->getPtrOperand()->getName());
 										
-										if( j >= 0 )
-											p_type = 0;
-										
-										j = searchInstByName(GEPNames, st->getPtrOperand()->getName());
-										
-										if( j >= 0 )
-											p_type = 1;
-										*/
 									if(v_found && p_found){
 										if((v_type == 0) && (p_type == 0)){
 											for(i=0;i<8;i++,j++,k++){
@@ -227,9 +188,9 @@ namespace{
 								//	}else{
 									if(!v_found && p_found){	
 										//int j=0;
-										errs() << "store pointer: ";
-										st->getPointerOperand()->getType()->dump();
-										st->dump();
+								//		errs() << "store pointer: ";
+								//		st->getPointerOperand()->getType()->dump();
+								//		st->dump();
 									
 										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
 									
@@ -374,19 +335,7 @@ namespace{
 												LoadNames.push_back(ret->getName());
 												j++;
 												if(i==0){
-												/*
-													for(auto& U : ld->uses()){
-														User *user = U.getUser();
-														//user->dump();
-														auto *Inst = dyn_cast<Instruction>(user);
-														MDNode *MDataDeriv = MDNode::get(ld->getContext(), 
-																						MDString::get(ld->getContext(),
-																									 "bitsliced"));
-														Inst->setMetadata("bitsliced", MDataDeriv);
-														//errs() << "instr of the user: ";
-														//Inst->dump();
-													}
-												*/
+												
 													ld->replaceAllUsesWith(ret);
 												}
 											}
@@ -441,8 +390,8 @@ namespace{
 												ret = builder.CreateInBoundsGEP(AllocInstBuff.at(j+i),
 																		ArrayRef <Value *>(idxs),
 																		"bslicedGEP");
-												errs() << "new pointer type: ";
-												ret->getType()->dump();
+									//			errs() << "new pointer type: ";
+									//			ret->getType()->dump();
 												auto *newGEP = dyn_cast<GetElementPtrInst>(ret);
 												newGEP->setMetadata("bitsliced", MData);
 												GEPInstBuff.push_back(newGEP);
@@ -450,19 +399,7 @@ namespace{
 												
 												
 												if(i==0){
-												/*
-													for(auto& U : gep->uses()){
-														User *user = U.getUser();
-														//user->dump();
-														auto *Inst = dyn_cast<Instruction>(user);
-														MDNode *MDataDeriv = MDNode::get(gep->getContext(), 
-																						MDString::get(gep->getContext(),
-																									 "bitsliced"));
-														Inst->setMetadata("bitsliced", MDataDeriv);
-														//errs() << "instr of the user: ";
-														//Inst->dump();
-													}
-												*/
+												
 													gep->replaceAllUsesWith(ret);
 												}
 												
@@ -482,7 +419,6 @@ namespace{
 						}
 					}
 				}
-			B.dump();
 			}
 			for(auto &EI: eraseList){
 				EI -> eraseFromParent();
