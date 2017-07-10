@@ -228,14 +228,13 @@ namespace{
 										}
 										*/		
 										//if(p_found){
-										for(i=0;i<8;){
+										for(i=0;i<8;i++;){
 											Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
 											Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
 											Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
 											Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
 											Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
 											builder.CreateStore(bit_index_inc, bit_index_addr);
-											i++;
 										
 											if(p_type == 0)
 												builder.CreateStore(slice, AllocInstBuff.at(j));
@@ -255,11 +254,12 @@ namespace{
 										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
 										Value *byte_value = ConstantInt::get(sliceTy, 0);
 										Value *byte_value_addr = builder.CreateAlloca(sliceTy, 0, "byte_value_address");
-										
+										Value *shift;
+										Value *bit_shifted;
 										for(i=0; i<8; i++){
 											byte_value = builder.CreateLoad(byte_value_addr, "byte_value");
-											Value *shift = ConstantInt::get(sliceTy, i);
-											Value *bit_shifted = builder.CreateShl(LoadInstBuff.at(k+i), shift);
+											shift = ConstantInt::get(sliceTy, i);
+											bit_shifted = builder.CreateShl(LoadInstBuff.at(k+i), shift);
 											byte_value = builder.CreateOr(byte_value, bit_shifted);
 											builder.CreateStore(byte_value, byte_value_addr);
 										}
@@ -296,11 +296,11 @@ namespace{
 											for(i=0;i<8;i++){
 												MDNode *MData = MDNode::get(ld->getContext(), 
 																	MDString::get(ld->getContext(), "bitsliced"));
-												ret = builder.CreateLoad(AllocInstBuff.at(j), "BitSlicedReg");
+												ret = builder.CreateLoad(AllocInstBuff.at(j+i), "BitSlicedReg");
 												ret->setMetadata("bitsliced", MData);
 												LoadInstBuff.push_back(ret);
 												LoadNames.push_back(ret->getName());
-												j++;
+												//j++;
 												if(i==0){
 												/*
 													for(auto& U : ld->uses()){
