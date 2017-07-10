@@ -127,46 +127,46 @@ namespace{
 									auto *st = dyn_cast<StoreInst>(&I);
 									
 								//	if(!isa<Constant>(st->getValueOperand())){
-										int j=0, k=0;
-										int tmp = 0;
-										int v_found = 0, p_found = 0;
-										int v_type = -1, p_type = -1;
-										
-										for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
-											val_name!=LoadNames.end(); val_name++, tmp++){
-											if(st->getValueOperand()->getName().equals(*val_name)){
-												v_found = 1;
-												v_type = 0;
-												k = tmp;
-												break;
-											}
+									int j=0, k=0;
+									int tmp = 0;
+									int v_found = 0, p_found = 0;
+									int v_type = -1, p_type = -1;
+									
+									for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
+										val_name!=LoadNames.end(); val_name++, tmp++){
+										if(st->getValueOperand()->getName().equals(*val_name)){
+											v_found = 1;
+											v_type = 0;
+											k = tmp;
+											break;
 										}
+									}
 										
-										tmp = 0;
-										for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
-											ptr_name!=AllocNames.end(); ptr_name++, tmp++){
-											if(st->getPointerOperand()->getName().equals(*ptr_name)){
-												p_found = 1;
-												p_type = 0;
-												
-												j = tmp;
-												break;
-											}
+									tmp = 0;
+									for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
+										ptr_name!=AllocNames.end(); ptr_name++, tmp++){
+										if(st->getPointerOperand()->getName().equals(*ptr_name)){
+											p_found = 1;
+											p_type = 0;
+											
+											j = tmp;
+											break;
 										}
-										
-										tmp = 0;
-										for(std::vector<StringRef>::iterator ptr_name=GEPNames.begin(); 
-											ptr_name!=GEPNames.end(); ptr_name++, tmp++){
-											if(st->getPointerOperand()->getName().equals(*ptr_name)){
-												p_found = 1;
-												p_type = 1;
-												
-												j = tmp;
-												break;
-											}
+									}
+									
+									tmp = 0;
+									for(std::vector<StringRef>::iterator ptr_name=GEPNames.begin(); 
+										ptr_name!=GEPNames.end(); ptr_name++, tmp++){
+										if(st->getPointerOperand()->getName().equals(*ptr_name)){
+											p_found = 1;
+											p_type = 1;
+											
+											j = tmp;
+											break;
 										}
-										
-										
+									}
+									
+									
 									if(v_found && p_found){
 										if((v_type == 0) && (p_type == 0)){
 											for(i=0;i<8;i++,j++,k++){
@@ -228,23 +228,23 @@ namespace{
 										}
 										*/		
 										//if(p_found){
-											for(i=0;i<8;){
-												Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
-												Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
-												Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
-												Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
-												Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
-												builder.CreateStore(bit_index_inc, bit_index_addr);
-												i++;
+										for(i=0;i<8;){
+											Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
+											Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
+											Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
+											Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
+											Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
+											builder.CreateStore(bit_index_inc, bit_index_addr);
+											i++;
+										
+											if(p_type == 0)
+												builder.CreateStore(slice, AllocInstBuff.at(j));
 											
-												if(p_type == 0)
-													builder.CreateStore(slice, AllocInstBuff.at(j));
+											if(p_type == 1)
+												builder.CreateStore(slice, GEPInstBuff.at(j));
 												
-												if(p_type == 1)
-													builder.CreateStore(slice, GEPInstBuff.at(j));
-													
-												j++; 	//the first name was found, I don't need any more to follow the outer
-												}		//loop, so I can use j to collect the 7 subsequent addresses I need.
+											j++; 	//the first name was found, I don't need any more to follow the outer
+											}		//loop, so I can use j to collect the 7 subsequent addresses I need.
 														//FIXME: what about the arrays? Shall wee keep it like their big jumps?
 									//	}	
 										
