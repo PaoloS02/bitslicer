@@ -21,7 +21,7 @@
 									//of the array.
 
 using namespace llvm;
-
+/*
 int searchInstByName(std::vector<StringRef> nameVector, StringRef name){
 	int i = 0;
 	int found = 0;
@@ -36,25 +36,25 @@ int searchInstByName(std::vector<StringRef> nameVector, StringRef name){
 	else
 		return -1;
 }
-
+*/
 namespace{
 	
 	struct BitSlicer : public FunctionPass{
 		static char ID;
 		//static int TYPE_OK;
-		static int INSTR_TYPE;
-		static int LAST_INSTR_TYPE;
+//		static int INSTR_TYPE;
+//		static int LAST_INSTR_TYPE;
 		static int done;
 		BitSlicer() : FunctionPass(ID) {}
 		std::vector<Instruction *> eraseList;
 		std::vector<AllocaInst *>  AllocInstBuff;
-		std::vector<LoadInst *> LoadInstBuff;
+/*		std::vector<LoadInst *> LoadInstBuff;
 		std::vector<GetElementPtrInst *> GEPInstBuff;
 		
 		std::vector<StringRef> AllocNames;
 		std::vector<StringRef> LoadNames;
 		std::vector<StringRef> GEPNames;
-		
+*/		
 		bool runOnFunction(Function &F){
 			int i;
 			for(BasicBlock& B : F){
@@ -72,351 +72,33 @@ namespace{
 						}
 						
 						
-					//	}
-					
-						if(isa<AllocaInst>(&I)){
-							INSTR_TYPE = 0;
-						}
-						else if(isa<StoreInst>(&I)){
-							INSTR_TYPE = 1;
-						}
-						else if(isa<LoadInst>(&I)){
-							INSTR_TYPE = 2;
-						}
-						else if(isa<GetElementPtrInst>(&I)){
-							INSTR_TYPE = 3;
-						}
-						else{
-							INSTR_TYPE = 4;
-						}
-						
-						switch(INSTR_TYPE){
-					
-							case 0:	
-							{
-								auto *all = dyn_cast<AllocaInst>(&I);
-								
-								if(all->getAllocatedType()->isIntegerTy(8) ||
-									(all->getAllocatedType()->isArrayTy() && 
-									all->getAllocatedType()->getArrayElementType()->isIntegerTy(8))){
-									//AllocInstBuff.push_back(all);
-									AllocaInst *ret;
-									
-									for(i=0;i<8*CPU_BYTES;i++){
-										MDNode *MData = MDNode::get(all->getContext(), 
-																	MDString::get(all->getContext(), "bitsliced"));
-										ret = builder.CreateAlloca(all->getAllocatedType(), 0, "bsliced");
-										ret->setMetadata("bitsliced", MData);
-										AllocInstBuff.push_back(ret);
-										AllocNames.push_back(ret->getName());
-										if(i==0){
-										
-											all->replaceAllUsesWith(ret);
-										}
-									}
-									eraseList.push_back(&I);
-									done = 1;
-									LAST_INSTR_TYPE = 0;
-								}
-						
-							break;
-							}
-						
-							case 1: 
-							{
-									auto *st = dyn_cast<StoreInst>(&I);
-									
-								//	if(!isa<Constant>(st->getValueOperand())){
-									int j=0, k=0;
-									int tmp = 0;
-									int v_found = 0, p_found = 0;
-									int v_type = -1, p_type = -1;
-									
-									for(std::vector<StringRef>::iterator val_name=LoadNames.begin(); 
-										val_name!=LoadNames.end(); val_name++, tmp++){
-										if(st->getValueOperand()->getName().equals(*val_name)){
-											v_found = 1;
-											v_type = 0;
-											k = tmp;
-											break;
-										}
-									}
-										
-									tmp = 0;
-									for(std::vector<StringRef>::iterator ptr_name=AllocNames.begin(); 
-										ptr_name!=AllocNames.end(); ptr_name++, tmp++){
-										if(st->getPointerOperand()->getName().equals(*ptr_name)){
-											p_found = 1;
-											p_type = 0;
-											
-											j = tmp;
-											break;
-										}
-									}
-									
-									tmp = 0;
-									for(std::vector<StringRef>::iterator ptr_name=GEPNames.begin(); 
-										ptr_name!=GEPNames.end(); ptr_name++, tmp++){
-										if(st->getPointerOperand()->getName().equals(*ptr_name)){
-											p_found = 1;
-											p_type = 1;
-											
-											j = tmp;
-											break;
-										}
-									}
-									
-									
-									if(v_found && p_found){
-										if((v_type == 0) && (p_type == 0)){
-											for(i=0;i<8;i++,j++,k++){
-												builder.CreateStore(LoadInstBuff.at(k), AllocInstBuff.at(j));
-											}
-										}
-										else if((v_type == 0) && (p_type == 1)){
-											for(i=0;i<8;i++,j++,k++){
-												builder.CreateStore(LoadInstBuff.at(k), GEPInstBuff.at(j));
-											}
-										}
-										else{
-											errs() << "Error instruction:";
-											I.dump();
-											errs() << "No matches in the names vectors. v and p: " << v_found << " " << p_found;
-										}
-									}	
-											
-								//	}else{
-									if(!v_found && p_found){	
-										//int j=0;
-								//		errs() << "store pointer: ";
-								//		st->getPointerOperand()->getType()->dump();
-								//		st->dump();
-									
-										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
-									
-										Value *bit_index_value = ConstantInt::get(sliceTy, 0);
-										Value *bit_index_addr = builder.CreateAlloca(sliceTy, 0, "bit_index");
-										Value *bit_inc = ConstantInt::get(sliceTy, 1);
-								//	errs() << "costante!!";
-								//	st->getValueOperand()->dump();
-									
-								//		int p_found = 0;
-								//		int p_type = 0;
-								//		int p_tmp = 0;
-										
-										builder.CreateStore(bit_index_value, bit_index_addr);
-										/*
-										for(auto &name: AllocNames){
-											if(st->getPointerOperand()->getName().equals(name)){
-												p_found = 1;
-												p_type = 0;
-												j = p_tmp;
-												break;
-											}
-											p_tmp++;
-										}
-										
-										p_tmp = 0;
-										for(auto &name: GEPNames){
-											if(st->getPointerOperand()->getName().equals(name)){
-												p_found = 1;
-												p_type = 1;
-												j = p_tmp;
-												break;
-											}
-											p_tmp++;
-										}
-										*/		
-										//if(p_found){
-										for(i=0;i<8;i++;){
-											Value *bit_index = builder.CreateLoad(bit_index_addr,"bit_index");
-											Value *mask = ConstantInt::get(sliceTy, 0x01<<i);
-											Value *bit_and = builder.CreateAnd(st->getValueOperand(), mask, "bit_and");
-											Value *slice = builder.CreateLShr(bit_and,bit_index,"bit_shiftR");
-											Value *bit_index_inc = builder.CreateAdd(bit_index, bit_inc);
-											builder.CreateStore(bit_index_inc, bit_index_addr);
-										
-											if(p_type == 0)
-												builder.CreateStore(slice, AllocInstBuff.at(j));
-											
-											if(p_type == 1)
-												builder.CreateStore(slice, GEPInstBuff.at(j));
-												
-											j++; 	//the first name was found, I don't need any more to follow the outer
-											}		//loop, so I can use j to collect the 7 subsequent addresses I need.
-														//FIXME: what about the arrays? Shall wee keep it like their big jumps?
-									//	}	
-										
-											
-									}
-									
-									if(v_found && !p_found){
-										Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());
-										Value *byte_value = ConstantInt::get(sliceTy, 0);
-										Value *byte_value_addr = builder.CreateAlloca(sliceTy, 0, "byte_value_address");
-										Value *shift;
-										Value *bit_shifted;
-										for(i=0; i<8; i++){
-											byte_value = builder.CreateLoad(byte_value_addr, "byte_value");
-											shift = ConstantInt::get(sliceTy, i);
-											bit_shifted = builder.CreateShl(LoadInstBuff.at(k+i), shift);
-											byte_value = builder.CreateOr(byte_value, bit_shifted);
-											builder.CreateStore(byte_value, byte_value_addr);
-										}
-										
-										builder.CreateStore(byte_value, st->getPointerOperand());
-									}
-									/*if(!isa<Constant>(st->getValueOperand())){
-										for(auto &name: AllocNames){
-											if(st->getPointerOperand()->getName().equals(name)){
-												for(i=0;i<8*CPU_BYTES;i++){
-													builder.CreateStore(,);
-												}
-											}
-											j++;
-										}
-									}
-									*/
-									eraseList.push_back(&I);
-									done = 1;
-									LAST_INSTR_TYPE = 1;
-									
-								
-							break;
-							}
-							case 2:
-							{
-									auto *ld = dyn_cast<LoadInst>(&I);
-									int j=0;
-
-								
-									for(auto &name: AllocNames){
-										if(ld->getPointerOperand()->getName().equals(name)){
-											LoadInst *ret;
-											for(i=0;i<8;i++){
-												MDNode *MData = MDNode::get(ld->getContext(), 
-																	MDString::get(ld->getContext(), "bitsliced"));
-												ret = builder.CreateLoad(AllocInstBuff.at(j+i), "BitSlicedReg");
-												ret->setMetadata("bitsliced", MData);
-												LoadInstBuff.push_back(ret);
-												LoadNames.push_back(ret->getName());
-												//j++;
-												if(i==0){
-												/*
-													for(auto& U : ld->uses()){
-														User *user = U.getUser();
-														//user->dump();
-														auto *Inst = dyn_cast<Instruction>(user);
-														MDNode *MDataDeriv = MDNode::get(ld->getContext(), 
-																						MDString::get(ld->getContext(),
-																									 "bitsliced"));
-														Inst->setMetadata("bitsliced", MDataDeriv);
-														//errs() << "instr of the user: ";
-														//Inst->dump();
-													}
-												*/
-													ld->replaceAllUsesWith(ret);
-												}
-											}
-										}
-										j++;
-									}
-									
-									j = 0;
-									for(auto &name: GEPNames){
-										if(ld->getPointerOperand()->getName().equals(name)){
-											LoadInst *ret;
-											for(i=0;i<8;i++){
-												MDNode *MData = MDNode::get(ld->getContext(), 
-																	MDString::get(ld->getContext(), "bitsliced"));
-												ret = builder.CreateLoad(GEPInstBuff.at(j), "BitSlicedReg");
-												ret->setMetadata("bitsliced", MData);
-												LoadInstBuff.push_back(ret);
-												LoadNames.push_back(ret->getName());
-												j++;
-												if(i==0){
-												
-													ld->replaceAllUsesWith(ret);
-												}
-											}
-										}
-										j++;
-									}
-									
-									eraseList.push_back(&I);
-									done = 1;
-									LAST_INSTR_TYPE = 2;	
-								
-							break;
-							}
-							case 3:
-							{
-								
-								//auto *gep = dyn_cast<GetElementPtrInst>(&I);
-								
-								
-								/*
-								int op_count = 0;
-								for(auto& op : I.operands()){
-									errs() << "op(" << op_count << "): ";
-									op.get()->dump();
-									
-									errs() << "check(" << op_count << "): ";
-									I.getOperand(op_count)->dump();
-									
-									errs() << "index(" << gep->getNumIndices() << "): ";
-									gep->getOperand(gep->getNumIndices())->dump();
-									
-									op_count++;
+						if(auto *all = dyn_cast<AllocaInst>(&I)){
+							AllocaInst *ret;
+							MDNode *MData = MDNode::get(all->getContext(), 
+														MDString::get(all->getContext(), "bitsliced"));
+							Value *size = 0;
+							/*
+							if(auto *arrTy = dyn_cast<ArrayType>(all->getAllocatedType())){
+								size = ConstantInt::get(IntegerType::getInt64Ty(I.getModule()->getContext()),
+														arrTy->getArrayNumElements());
 								}
 								*/
-								
-								if(I.getMetadata("bitsliced")){
-									auto *gep = dyn_cast<GetElementPtrInst>(&I);
-									int j = 0;
-									for(auto &name: AllocNames){
-										if(gep->getPointerOperand()->getName().equals(name)){
-											Value *ret;
-											std::vector <Value *> idxs;
-											for(llvm::User::op_iterator idx=gep->idx_begin();
-												idx!=gep->idx_end();
-												idx++){
-													idxs.push_back(gep->getOperand(idx->getOperandNo()));
-												}
-											
-											for(i=0;i<8;i++){
-												MDNode *MData = MDNode::get(gep->getContext(), 
-																			MDString::get(gep->getContext(), "bitsliced"));
-												ret = builder.CreateInBoundsGEP(AllocInstBuff.at(j+i),
-																		ArrayRef <Value *>(idxs),
-																		"bslicedGEP");
-									//			errs() << "new pointer type: ";
-									//			ret->getType()->dump();
-												auto *newGEP = dyn_cast<GetElementPtrInst>(ret);
-												newGEP->setMetadata("bitsliced", MData);
-												GEPInstBuff.push_back(newGEP);
-												GEPNames.push_back(newGEP->getName());
-												
-												
-												if(i==0){
-												
-													gep->replaceAllUsesWith(ret);
-												}
-												
-											}
-												
-										}
-										j++;	
-									}
-									eraseList.push_back(&I);
-									done = 1;
-									LAST_INSTR_TYPE = 3;	
-								}
-								
-							break;		
-							}
+							ArrayType *arrTy;
+							if(isa<ArrayType>(all->getAllocatedType()))
+								arrTy = ArrayType::get(all->getAllocatedType()->getArrayElementType(),
+																  all->getAllocatedType()->getArrayNumElements()*8*CPU_BYTES);
+							else
+								arrTy = ArrayType::get(all->getAllocatedType(), 8*CPU_BYTES);
+							
+							ret = builder.CreateAlloca(arrTy, 0, "bsliced");
+							ret->setMetadata("bitsliced", MData);
+						//	all->replaceAllUsesWith(ret);
+							
+							eraseList.push_back(&I);
+							done = 1;
+						}	
 						
-						}
+						
 					}
 				}
 			}
@@ -433,8 +115,8 @@ namespace{
 
 char BitSlicer::ID = 0;
 //int BitSlicer::TYPE_OK = 0;
-int BitSlicer::INSTR_TYPE = 0;
-int BitSlicer::LAST_INSTR_TYPE = 0;
+//int BitSlicer::INSTR_TYPE = 0;
+//int BitSlicer::LAST_INSTR_TYPE = 0;
 int BitSlicer::done = 0;
 
 static void registerBitSlicerPass(const PassManagerBuilder &,
