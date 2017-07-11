@@ -47,7 +47,8 @@ namespace{
 		static int done;
 		BitSlicer() : FunctionPass(ID) {}
 		std::vector<Instruction *> eraseList;
-		std::vector<AllocaInst *>  AllocInstBuff;
+		std::vector<AllocaInst *>  AllocOldInstBuff;
+		std::vector<AllocaInst *>  AllocNewInstBuff;
 /*		std::vector<LoadInst *> LoadInstBuff;
 		std::vector<GetElementPtrInst *> GEPInstBuff;
 		
@@ -93,7 +94,8 @@ namespace{
 							ret = builder.CreateAlloca(arrTy, 0, "bsliced");
 							ret->setMetadata("bitsliced", MData);
 						//	all->replaceAllUsesWith(ret);
-							
+							AllocOldInstBuff.push_back(&I);
+							AllocNewInstBuff.push_back(ret);
 							eraseList.push_back(&I);
 							done = 1;
 						}	
