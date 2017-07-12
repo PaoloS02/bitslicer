@@ -20,6 +20,8 @@
 									//fault otherwise). You must set this macro to the dimension
 									//of the array.
 
+#define SENSIBLE_DATA_SIZE 8		//size in bits of the sensible data to be bitsliced in the program
+
 using namespace llvm;
 /*
 int searchInstByName(std::vector<StringRef> nameVector, StringRef name){
@@ -47,7 +49,7 @@ namespace{
 		static int done;
 		BitSlicer() : FunctionPass(ID) {}
 		std::vector<Instruction *> eraseList;
-		std::vector<AllocaInst *>  AllocOldInstBuff;
+		std::vector<StringRef>  AllocOldNames;
 		std::vector<AllocaInst *>  AllocNewInstBuff;
 /*		std::vector<LoadInst *> LoadInstBuff;
 		std::vector<GetElementPtrInst *> GEPInstBuff;
@@ -94,12 +96,76 @@ namespace{
 							ret = builder.CreateAlloca(arrTy, 0, "bsliced");
 							ret->setMetadata("bitsliced", MData);
 						//	all->replaceAllUsesWith(ret);
-							AllocOldInstBuff.push_back(&I);
+							AllocOldNames.push_back(all->getName());
 							AllocNewInstBuff.push_back(ret);
 							eraseList.push_back(&I);
 							done = 1;
 						}	
 						
+						
+						if(auto *st = dyn_cast<StoreInst>(&I)){
+							bool IsBitSlicedVal = false;
+							bool IsBitSlicedPtr = false;
+							int i = 0;
+							int j = 0;
+							if(auto *stPtr = dyn_cast<Instruction>(st->getPointerOperand()))
+								IsBitSlicedPtr = true;								
+							if(auto *stVal = dyn_cast<Instruction>(st->getValueOperand())){
+								if(stVal->getMetadata("bitsliced"))
+									IsBitSlicedVal = true;
+							}
+							
+							if(IsBitSlicedPtr && !IsBitSlicedVal){
+								Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());	//FIXME:SENSIBLE DATA TYPE SELECTABLE?
+								Type *idxTy = IntegerType::getInt64Ty(I.getModule()->getContext());
+								Value *bitIdxVal = ConstantInt::get(sliceTy, 0x01);
+								Value *bitIdxAddr = builder.CreateAlloca(sliceTy, 0, "bit_index");
+								builder.CreateStore(bitIdxVal, bitIdxAddr);
+								
+								std::vector<Value *> IdxList;
+								Value *init = ConstantInt::get(idxTy, 0);
+								Value *bitAddr;
+								Value *bitIdx;
+								Value *bitMask;
+								Value *bitAnd;
+								Value *slice;
+								IdxList.push_back(init);
+								IdxList.push_back(init);
+								
+								if(auto *ptrInst = dyn_cast<GetElementPtrInst>(st->getPointerOperand())){
+									
+									for(std::vector<StringRef>::iterator allName = AllocOldNames.begin();
+																			allName != AllocOldNames.end();
+																			allName++, j++){
+										if(ptrInst->getPointerOperand()->getName().equals(*allName))
+											break;
+									}
+									for(i=0;i<8*CPU_BYTES;i++){
+										Value *rowIdx = ConstantInt::get(idxTy, 
+																			(cast<AllocaInst>(ptrInst->getPointerOperand())
+																			->getAllocatedType()
+																			->getArrayNumElements() * i)
+																			/ (8*CPU_BYTES));
+										Value *IDX = builder.CreateAdd(rowIdx, ptrInst->getOperand(2));
+										IdxList.at(1) = IDX;
+										
+										bitIdx = builder.CreateLoad(bitIdxAddr);
+										bitIdx = builder.CreateShl(bitIdx, ConstantInt::get(sliceTy, i));
+										bitAnd = builder.CreateAnd(st->getValueOperand(), bitIdx);
+										builder.CreateStore(bitIdx, bitIdxAddr);
+										slice = builder.CreateLShr(bitAnd, bitIdx);
+										
+										bitAddr = builder.CreateGEP(AllocNewInstBuff.at(j), 
+																	ArrayRef <Value *>(IdxList));
+										builder.CreateStore(slice, bitAddr);
+									}
+									
+								//	eraseList.push_back(ptrInst->getPointerOperand());
+								//	eraseList.push_back(ptrInst);
+									eraseList.push_back(st);
+								}
+							}
+						}
 						
 					}
 				}
