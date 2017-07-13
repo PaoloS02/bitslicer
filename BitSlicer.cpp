@@ -20,7 +20,7 @@
 									//fault otherwise). You must set this macro to the dimension
 									//of the array.
 
-#define SENSIBLE_DATA_SIZE 8		//size in bits of the sensible data to be bitsliced in the program
+#define SENSIBLE_DATA_BYTES 1		//size in bits of the sensible data to be bitsliced in the program
 
 using namespace llvm;
 /*
@@ -130,10 +130,15 @@ namespace{
 							//	Value *bitMask;
 								Value *bitAnd;
 								Value *slice;
+								Value *sliceSize;
+								Value *bitBaseIdx;
+								Value *bitOffset;
+								Value *IDX;
 								IdxList.push_back(init);
 								IdxList.push_back(init);
 								
 								if(auto *ptrInst = dyn_cast<GetElementPtrInst>(st->getPointerOperand())){
+									j=0;
 									
 									for(std::vector<StringRef>::iterator allName = AllocOldNames.begin();
 																			allName != AllocOldNames.end();
@@ -141,12 +146,12 @@ namespace{
 										if(ptrInst->getPointerOperand()->getName().equals(*allName))
 											break;
 									}
-									for(i=0;i<8*CPU_BYTES;i++){
-										Value *bitOffset = ConstantInt::get(idxTy, CPU_BYTES * i);
-										Value *sliceSize = ConstantInt::get(idxTy, SENSIBLE_DATA_SIZE);
-										Value *bitBaseIdx = builder.CreateMul(ptrInst->getOperand(2), sliceSize);
+									for(i=0;i<8*SENSIBLE_DATA_BYTES;i++){
+										sliceSize = ConstantInt::get(idxTy, SENSIBLE_DATA_BYTES*8);
+										bitBaseIdx = builder.CreateMul(ptrInst->getOperand(2), sliceSize);
+										bitOffset = ConstantInt::get(idxTy, CPU_BYTES * i);
 										
-										Value *IDX = builder.CreateAdd(bitBaseIdx, bitOffset, "IDX");
+										IDX = builder.CreateAdd(bitBaseIdx, bitOffset, "IDX");
 										//errs() << "rowIdx: ";
 										//rowIdx->dump();
 										IdxList.at(1) = IDX;
@@ -169,6 +174,33 @@ namespace{
 									eraseList.push_back(&I);
 									eraseList.push_back(ptrInst);
 									
+								}
+								
+								if(auto *ptrInst = dyn_cast<AllocaInst>(st->getPointerOperand())){
+									j=0;
+									for(std::vector<StringRef>::iterator allName = AllocOldNames.begin();
+																			allName != AllocOldNames.end();
+																			allName++, j++){
+										if(ptrInst->getName().equals(*allName))
+											break;
+									}
+									
+									for(i=0;i<8*SENSIBLE_DATA_BYTES;i++){
+										IDX = ConstantInt::get(idxTy, CPU_BYTES * i);
+										IdxList.at(1) = IDX;
+										
+										bitIdx = builder.CreateLoad(bitIdxAddr, "loadBitIdx");
+										bitIdx = builder.CreateShl(bitIdx, ConstantInt::get(sliceTy, i));
+										bitAnd = builder.CreateAnd(st->getValueOperand(), bitIdx, "applyMask");
+										builder.CreateStore(bitIdx, bitIdxAddr, "storeBitIdx");
+										slice = builder.CreateLShr(bitAnd, ConstantInt::get(sliceTy, i), "sliceReady");
+										
+										bitAddr = builder.CreateGEP(AllocNewInstBuff.at(j), 
+																	ArrayRef <Value *>(IdxList));
+										builder.CreateStore(slice, bitAddr);
+									}
+									
+									eraseList.push_back(&I);
 								}
 							}
 						}
