@@ -142,11 +142,11 @@ namespace{
 											break;
 									}
 									for(i=0;i<8*CPU_BYTES;i++){
-										Value *rowIdx = ConstantInt::get(idxTy, 
-																			(cast<AllocaInst>(ptrInst->getPointerOperand())
-																			->getAllocatedType()
-																			->getArrayNumElements() * i));
-										Value *IDX = builder.CreateAdd(rowIdx, ptrInst->getOperand(2), "IDX");
+										Value *bitOffset = ConstantInt::get(idxTy, CPU_BYTES * i);
+										Value *sliceSize = ConstantInt::get(idxTy, SENSIBLE_DATA_SIZE);
+										Value *bitBaseIdx = builder.CreateMul(ptrInst->getOperand(2), sliceSize);
+										
+										Value *IDX = builder.CreateAdd(bitBaseIdx, bitOffset, "IDX");
 										//errs() << "rowIdx: ";
 										//rowIdx->dump();
 										IdxList.at(1) = IDX;
