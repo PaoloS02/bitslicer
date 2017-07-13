@@ -59,7 +59,7 @@ namespace{
 		std::vector<StringRef> GEPNames;
 */		
 		bool runOnFunction(Function &F){
-			int i;
+		//	int i;
 			for(BasicBlock& B : F){
 				for(Instruction& I : B){
 					IRBuilder<> builder(&I);
@@ -79,7 +79,7 @@ namespace{
 							AllocaInst *ret;
 							MDNode *MData = MDNode::get(all->getContext(), 
 														MDString::get(all->getContext(), "bitsliced"));
-							Value *size = 0;
+						//	Value *size = 0;
 							/*
 							if(auto *arrTy = dyn_cast<ArrayType>(all->getAllocatedType())){
 								size = ConstantInt::get(IntegerType::getInt64Ty(I.getModule()->getContext()),
@@ -95,8 +95,9 @@ namespace{
 							
 							ret = builder.CreateAlloca(arrTy, 0, "bsliced");
 							ret->setMetadata("bitsliced", MData);
-						//	all->replaceAllUsesWith(ret);
-							AllocOldNames.push_back(all->getName());
+							AllocaInst *fakeAlloc = new AllocaInst(all->getAllocatedType(), 0, all->getName());
+							all->replaceAllUsesWith(fakeAlloc);
+							AllocOldNames.push_back(fakeAlloc->getName());
 							AllocNewInstBuff.push_back(ret);
 							eraseList.push_back(&I);
 							done = 1;
@@ -108,7 +109,7 @@ namespace{
 							bool IsBitSlicedPtr = false;
 							int i = 0;
 							int j = 0;
-							if(auto *stPtr = dyn_cast<Instruction>(st->getPointerOperand()))
+							if(isa<Instruction>(st->getPointerOperand()))
 								IsBitSlicedPtr = true;								
 							if(auto *stVal = dyn_cast<Instruction>(st->getValueOperand())){
 								if(stVal->getMetadata("bitsliced"))
@@ -119,14 +120,14 @@ namespace{
 								Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());	//FIXME:SENSIBLE DATA TYPE SELECTABLE?
 								Type *idxTy = IntegerType::getInt64Ty(I.getModule()->getContext());
 								Value *bitIdxVal = ConstantInt::get(sliceTy, 0x01);
-								Value *bitIdxAddr = builder.CreateAlloca(sliceTy, 0, "bit_index");
-								builder.CreateStore(bitIdxVal, bitIdxAddr);
+								Value *bitIdxAddr = builder.CreateAlloca(sliceTy, 0, "bitIdx");
+								builder.CreateStore(bitIdxVal, bitIdxAddr, "storeBitIdx");
 								
 								std::vector<Value *> IdxList;
 								Value *init = ConstantInt::get(idxTy, 0);
 								Value *bitAddr;
 								Value *bitIdx;
-								Value *bitMask;
+							//	Value *bitMask;
 								Value *bitAnd;
 								Value *slice;
 								IdxList.push_back(init);
@@ -144,16 +145,20 @@ namespace{
 										Value *rowIdx = ConstantInt::get(idxTy, 
 																			(cast<AllocaInst>(ptrInst->getPointerOperand())
 																			->getAllocatedType()
-																			->getArrayNumElements() * i)
-																			/ (8*CPU_BYTES));
-										Value *IDX = builder.CreateAdd(rowIdx, ptrInst->getOperand(2));
+																			->getArrayNumElements() * i));
+										Value *IDX = builder.CreateAdd(rowIdx, ptrInst->getOperand(2), "IDX");
+										//errs() << "rowIdx: ";
+										//rowIdx->dump();
 										IdxList.at(1) = IDX;
+										//errs() << "arraynumelem: " << cast<AllocaInst>(ptrInst->getPointerOperand())
+										//									->getAllocatedType()
+										//									->getArrayNumElements() << "\n";
 										
-										bitIdx = builder.CreateLoad(bitIdxAddr);
+										bitIdx = builder.CreateLoad(bitIdxAddr, "loadBitIdx");
 										bitIdx = builder.CreateShl(bitIdx, ConstantInt::get(sliceTy, i));
-										bitAnd = builder.CreateAnd(st->getValueOperand(), bitIdx);
-										builder.CreateStore(bitIdx, bitIdxAddr);
-										slice = builder.CreateLShr(bitAnd, bitIdx);
+										bitAnd = builder.CreateAnd(st->getValueOperand(), bitIdx, "applyMask");
+										builder.CreateStore(bitIdx, bitIdxAddr, "storeBitIdx");
+										slice = builder.CreateLShr(bitAnd, ConstantInt::get(sliceTy, i), "sliceReady");
 										
 										bitAddr = builder.CreateGEP(AllocNewInstBuff.at(j), 
 																	ArrayRef <Value *>(IdxList));
@@ -161,8 +166,9 @@ namespace{
 									}
 									
 								//	eraseList.push_back(ptrInst->getPointerOperand());
-								//	eraseList.push_back(ptrInst);
-									eraseList.push_back(st);
+									eraseList.push_back(&I);
+									eraseList.push_back(ptrInst);
+									
 								}
 							}
 						}

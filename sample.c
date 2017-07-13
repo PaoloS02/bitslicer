@@ -19,11 +19,11 @@ int main(){
 	uint8_t __attribute__ ((bitsliced)) v1;
 	//uint8_t __attribute__ ((bitsliced)) ptext[8];
 	
-	uint8_t __attribute__ ((bitsliced)) Mkey[8];
+	uint8_t __attribute__ ((bitsliced)) Mkey[10];
 	uint8_t __attribute__ ((bitsliced)) Matrix[5][6];
 	uint8_t __attribute__ ((bitsliced)) Cube[5][6][8];
 	
-	v1 = 0x8e;
+	//v1 = 0x8e;
 	Mkey[3] = 0x1e;
 	
 	/*
