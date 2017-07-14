@@ -91,7 +91,7 @@ namespace{
 								arrTy = ArrayType::get(all->getAllocatedType()->getArrayElementType(),
 																  all->getAllocatedType()->getArrayNumElements()*8*CPU_BYTES);
 							else
-								arrTy = ArrayType::get(all->getAllocatedType(), 8*CPU_BYTES);
+								arrTy = ArrayType::get(all->getAllocatedType(), 8*CPU_BYTES*SENSIBLE_DATA_BYTES);
 							
 							ret = builder.CreateAlloca(arrTy, 0, "bsliced");
 							ret->setMetadata("bitsliced", MData);
@@ -119,15 +119,15 @@ namespace{
 							if(IsBitSlicedPtr && !IsBitSlicedVal){
 								Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());	//FIXME:SENSIBLE DATA TYPE SELECTABLE?
 								Type *idxTy = IntegerType::getInt64Ty(I.getModule()->getContext());
-								Value *bitIdxVal = ConstantInt::get(sliceTy, 0x01);
-								Value *bitIdxAddr = builder.CreateAlloca(sliceTy, 0, "bitIdx");
-								builder.CreateStore(bitIdxVal, bitIdxAddr, "storeBitIdx");
+								Value *bitMaskInit = ConstantInt::get(sliceTy, 0x01);
+							//	Value *bitIdxAddr = builder.CreateAlloca(sliceTy, 0, "bitIdx");
+							//	builder.CreateStore(bitIdxVal, bitIdxAddr, "storeBitIdx");
 								
 								std::vector<Value *> IdxList;
 								Value *init = ConstantInt::get(idxTy, 0);
 								Value *bitAddr;
-								Value *bitIdx;
-							//	Value *bitMask;
+							//	Value *bitIdx;
+								Value *bitMask;
 								Value *bitAnd;
 								Value *slice;
 								Value *sliceSize;
@@ -147,7 +147,7 @@ namespace{
 											break;
 									}
 									for(i=0;i<8*SENSIBLE_DATA_BYTES;i++){
-										sliceSize = ConstantInt::get(idxTy, SENSIBLE_DATA_BYTES*8);
+										sliceSize = ConstantInt::get(idxTy, CPU_BYTES*SENSIBLE_DATA_BYTES*8);
 										bitBaseIdx = builder.CreateMul(ptrInst->getOperand(2), sliceSize);
 										bitOffset = ConstantInt::get(idxTy, CPU_BYTES * i);
 										
@@ -159,13 +159,13 @@ namespace{
 										//									->getAllocatedType()
 										//									->getArrayNumElements() << "\n";
 										
-										bitIdx = builder.CreateLoad(bitIdxAddr, "loadBitIdx");
-										bitIdx = builder.CreateShl(bitIdx, ConstantInt::get(sliceTy, i));
-										bitAnd = builder.CreateAnd(st->getValueOperand(), bitIdx, "applyMask");
-										builder.CreateStore(bitIdx, bitIdxAddr, "storeBitIdx");
+								//		bitIdx = builder.CreateLoad(bitIdxAddr, "loadBitIdx");
+										bitMask = builder.CreateShl(bitMaskInit, ConstantInt::get(sliceTy, i));
+										bitAnd = builder.CreateAnd(st->getValueOperand(), bitMask, "applyMask");
+								//		builder.CreateStore(bitIdx, bitIdxAddr, "storeBitIdx");
 										slice = builder.CreateLShr(bitAnd, ConstantInt::get(sliceTy, i), "sliceReady");
 										
-										bitAddr = builder.CreateGEP(AllocNewInstBuff.at(j), 
+										bitAddr = builder.CreateInBoundsGEP(AllocNewInstBuff.at(j), 
 																	ArrayRef <Value *>(IdxList));
 										builder.CreateStore(slice, bitAddr);
 									}
@@ -189,13 +189,13 @@ namespace{
 										IDX = ConstantInt::get(idxTy, CPU_BYTES * i);
 										IdxList.at(1) = IDX;
 										
-										bitIdx = builder.CreateLoad(bitIdxAddr, "loadBitIdx");
-										bitIdx = builder.CreateShl(bitIdx, ConstantInt::get(sliceTy, i));
-										bitAnd = builder.CreateAnd(st->getValueOperand(), bitIdx, "applyMask");
-										builder.CreateStore(bitIdx, bitIdxAddr, "storeBitIdx");
+								//		bitIdx = builder.CreateLoad(bitIdxAddr, "loadBitIdx");
+										bitMask = builder.CreateShl(bitMaskInit, ConstantInt::get(sliceTy, i));
+										bitAnd = builder.CreateAnd(st->getValueOperand(), bitMask, "applyMask");
+								//		builder.CreateStore(bitIdx, bitIdxAddr, "storeBitIdx");
 										slice = builder.CreateLShr(bitAnd, ConstantInt::get(sliceTy, i), "sliceReady");
 										
-										bitAddr = builder.CreateGEP(AllocNewInstBuff.at(j), 
+										bitAddr = builder.CreateInBoundsGEP(AllocNewInstBuff.at(j), 
 																	ArrayRef <Value *>(IdxList));
 										builder.CreateStore(slice, bitAddr);
 									}
@@ -205,6 +205,79 @@ namespace{
 							}
 						}
 						
+						if(auto *ld = dyn_cast<LoadInst>(&I)){
+							int i = 0;
+							int j = 0;
+							
+							if(auto *ptrInst = dyn_cast<GetElementPtrInst>(ld->getPointerOperand())){
+							//	LoadInst *ret;
+								Value *slice;
+								Value *IDX;
+								Value *bitBaseIdx;
+								Value *bitOffset;
+								Value *bitAddr;
+								Value *bitShift;
+								Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());	//FIXME:SENSIBLE DATA TYPE SELECTABLE?
+								Type *idxTy = IntegerType::getInt64Ty(I.getModule()->getContext());
+								Value *sliceSize = ConstantInt::get(idxTy, 8*CPU_BYTES*SENSIBLE_DATA_BYTES);
+								Value *init = ConstantInt::get(idxTy, 0);
+								Value *byteAddr = builder.CreateAlloca(sliceTy, 0, "byte");
+								Value *byte = ConstantInt::get(sliceTy, 0);
+								builder.CreateStore(byte, byteAddr, "byteAddr");
+								std::vector<Value *> IdxList;
+								IdxList.push_back(init);
+								IdxList.push_back(init);
+								
+								for(std::vector<StringRef>::iterator allName = AllocOldNames.begin();
+																				allName != AllocOldNames.end();
+																				allName++, j++){
+									if(ptrInst->getPointerOperand()->getName().equals(*allName))
+										break;
+								}
+								
+								for(i=0;i<8*SENSIBLE_DATA_BYTES;i++){
+									//sliceSize = ConstantInt::get(idxTy, CPU_BYTES*SENSIBLE_DATA_BYTES*8);
+									byte = builder.CreateLoad(byteAddr, "loadByte");
+									bitBaseIdx = builder.CreateMul(ptrInst->getOperand(2), sliceSize);
+							//		errs() << "base idx: ";
+							//		bitBaseIdx->dump();
+							//		errs() << "allocated elements" << cast<AllocaInst>(AllocNewInstBuff.at(j))->getAllocatedType()->getArrayNumElements() << "\n";
+									bitOffset = ConstantInt::get(idxTy, CPU_BYTES*SENSIBLE_DATA_BYTES*i);
+									
+									IDX = builder.CreateAdd(bitBaseIdx, bitOffset, "IDX");
+									IdxList.at(1) = IDX;
+						//			errs() << "IDX: ";
+						//			IDX->dump();
+									
+									bitAddr = builder.CreateInBoundsGEP(AllocNewInstBuff.at(j), 
+																	ArrayRef <Value *>(IdxList));
+									slice = builder.CreateLoad(bitAddr, "slice");
+									bitShift = ConstantInt::get(sliceTy, i);
+									slice = builder.CreateShl(slice, bitShift);
+							//		slice = builder.CreateZExt(slice, IntegerType::getInt32Ty(I.getModule()->getContext()), "sliceZExt");
+							//		byte = builder.CreateZExt(byte, IntegerType::getInt32Ty(I.getModule()->getContext()), "byteZExt");
+									byte = builder.CreateOr(byte, slice);
+							//		byte = builder.CreateTrunc(byte, sliceTy, "byteTrunc");
+							//		slice = builder.CreateTrunc(slice, sliceTy, "sliceTrunc");
+									builder.CreateStore(byte, byteAddr, "storeByte");
+								}
+								
+								//ret = builder.CreateLoad(byteAddr, "compactLoad");
+							//	errs() << "byte users:\n";
+							//	for(auto& U : I.uses()){
+							//		User *user = U.getUser();
+							//		user->dump();
+							//	}
+							//	errs() << "before replace\n";
+								//ld->replaceAllUsesWith(ret);
+								ld->setOperand(0, byteAddr);
+							//	errs() << "after replace\n";
+								//eraseList.push_back(&I);
+								eraseList.push_back(ptrInst);
+							}
+						}
+						
+					done = 1;
 					}
 				}
 			}
