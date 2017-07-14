@@ -23,8 +23,8 @@ int main(){
 	uint8_t __attribute__ ((bitsliced)) Matrix[5][6];
 	uint8_t __attribute__ ((bitsliced)) Cube[5][6][8];
 	int i;
-	v1 = 0x8e;
-	Mkey[3] = 0x1e;
+	//v1 = 0x8e;
+	//Mkey[3] = 0x1e;
 	/*
 	for(i=0;i<8;i++){
 		Mkey[i] = 0x01 << i;
@@ -40,7 +40,7 @@ int main(){
 	
 	//a = a | b;
 	//a = tmp[5];
-	a = Mkey[3];
+	//a = Mkey[3];
 	
 	/*
 	for(i=0;i<8;i++){
@@ -66,17 +66,18 @@ int main(){
 		ptext[i] = i;
 	}
 	*/
+	
 	for(i=0;i<10;i++){
 		Mkey[i] = i;
 	}
 	
 	//encrypt(ptext, Mkey);
 	//v1 = v1 * 2;
-	/*
+	
 	for(i=0; i<8; i++){
-		ptext[i] = Mkey[i+16];
+		ptext[i] = Mkey[i+2];
 	}
-	*/
+	
 	/*
 	for(i=0; i<8; i++){
 		ptext[i] = ptext[i] ^ Mkey[i+16];
@@ -101,8 +102,9 @@ int main(){
 	a = Mkey[4];
 	b = Mkey[2];
 	*/
-	for(i=0;i<10;i++){
-		printf("M[%d]: %d\n", i, Mkey[i]);
+	
+	for(i=0;i<8;i++){
+		printf("P[%d]: %d\n", i, ptext[i]);
 		}
 	
 	return 0;

@@ -74,6 +74,8 @@ namespace{
 							Inst->setMetadata("bitsliced", mdata);
 						}
 						
+						errs() << "marked instruction: ";
+						I.dump();
 						
 						if(auto *all = dyn_cast<AllocaInst>(&I)){
 							AllocaInst *ret;
@@ -96,6 +98,7 @@ namespace{
 							ret = builder.CreateAlloca(arrTy, 0, "bsliced");
 							ret->setMetadata("bitsliced", MData);
 							AllocaInst *fakeAlloc = new AllocaInst(all->getAllocatedType(), 0, all->getName());
+							fakeAlloc->setMetadata("bitsliced", MData);
 							all->replaceAllUsesWith(fakeAlloc);
 							AllocOldNames.push_back(fakeAlloc->getName());
 							AllocNewInstBuff.push_back(ret);
@@ -109,14 +112,16 @@ namespace{
 							bool IsBitSlicedPtr = false;
 							int i = 0;
 							int j = 0;
-							if(isa<Instruction>(st->getPointerOperand()))
-								IsBitSlicedPtr = true;								
-							if(auto *stVal = dyn_cast<Instruction>(st->getValueOperand())){
+							if(auto *stPtr = dyn_cast<Instruction>(st->getPointerOperand())){
+								if(stPtr->getMetadata("bitsliced"))	
+									IsBitSlicedPtr = true;			
+							}					
+						/*	if(auto *stVal = dyn_cast<Instruction>(st->getValueOperand())){
 								if(stVal->getMetadata("bitsliced"))
 									IsBitSlicedVal = true;
 							}
-							
-							if(IsBitSlicedPtr && !IsBitSlicedVal){
+						*/	
+							if(IsBitSlicedPtr){
 								Type *sliceTy = IntegerType::getInt8Ty(I.getModule()->getContext());	//FIXME:SENSIBLE DATA TYPE SELECTABLE?
 								Type *idxTy = IntegerType::getInt64Ty(I.getModule()->getContext());
 								Value *bitMaskInit = ConstantInt::get(sliceTy, 0x01);
