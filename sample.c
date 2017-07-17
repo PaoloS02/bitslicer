@@ -14,6 +14,14 @@ void encrypt(uint8_t *ptext, uint8_t *key){
 }
 */
 
+int offset(){
+	return 6;
+}
+
+uint8_t *address(void *arr){
+	return arr;
+}
+
 int main(){
 
 	uint8_t __attribute__ ((bitsliced)) v1;
@@ -68,23 +76,26 @@ int main(){
 	*/
 	
 	for(i=0;i<10;i++){
-		Mkey[i] = i;
+		Mkey[i] = 0x55;
 	}
 	
 	//encrypt(ptext, Mkey);
 	//v1 = v1 * 2;
 	
-	for(i=0; i<8; i++){
-		ptext[i] = Mkey[i+2];
+	for(i=0; i<4; i++){
+		ptext[i] = 0xaa;
+		ptext[i+4] = 0x55;
 	}
 	
-	/*
+	
 	for(i=0; i<8; i++){
-		ptext[i] = ptext[i] ^ Mkey[i+16];
+		ptext[i] = ptext[i] ^ Mkey[i+2];
 	}
-	*/
 	
+	i = 6;
 	
+	*(ptext + offset()) = 0xaa;
+	*(address(&a)) = 9;
 	/*
 	for(i=0;i<8;i++){
 		v2 = A[i];

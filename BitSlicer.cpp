@@ -74,8 +74,8 @@ namespace{
 							Inst->setMetadata("bitsliced", mdata);
 						}
 						
-						errs() << "marked instruction: ";
-						I.dump();
+					//	errs() << "marked instruction: ";
+					//	I.dump();
 						
 						if(auto *all = dyn_cast<AllocaInst>(&I)){
 							AllocaInst *ret;
@@ -108,7 +108,7 @@ namespace{
 						
 						
 						if(auto *st = dyn_cast<StoreInst>(&I)){
-							bool IsBitSlicedVal = false;
+						//	bool IsBitSlicedVal = false;
 							bool IsBitSlicedPtr = false;
 							int i = 0;
 							int j = 0;
