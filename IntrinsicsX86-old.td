@@ -6377,10 +6377,3 @@ let TargetPrefix = "x86" in {
   def int_x86_clzero : GCCBuiltin<"__builtin_ia32_clzero">,
       Intrinsic<[], [llvm_ptr_ty], []>;
 }
-
-//===----------------------------------------------------------------------===//
-// BitSlicer
-let TargetPrefix = "x86" in {
-  def int_x86_bit : GCCBuiltin<"__builtin_bit">,
-  	  Intrinsic<[llvm_i8_ty], [llvm_i8_ty, llvm_i32_ty], []>;
-}

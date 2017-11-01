@@ -18,9 +18,14 @@ int offset(){
 	return 6;
 }
 
-uint8_t *address(void *arr){
+uint8_t value(uint8_t arr){
 	return arr;
 }
+
+uint8_t *address(uint8_t *arr){
+	return arr;
+}
+
 
 int main(){
 
@@ -87,6 +92,7 @@ int main(){
 		ptext[i+4] = 0x55;
 	}
 	
+	uint8_t bit = __builtin_bit(ptext[1], 2);
 	
 	for(i=0; i<8; i++){
 		ptext[i] = ptext[i] ^ Mkey[i+2];
@@ -94,8 +100,10 @@ int main(){
 	
 	i = 6;
 	
-	*(ptext + offset()) = 0xaa;
-	*(address(&a)) = 9;
+	//*(ptext + offset()) = 0xaa;
+	//*(address(ptext[6])) = 0xaa;
+	a = value(ptext[6]);
+	*address(&ptext[6]) = 0xaa;
 	/*
 	for(i=0;i<8;i++){
 		v2 = A[i];
