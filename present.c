@@ -19,6 +19,7 @@
 
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -31,24 +32,21 @@ int SboxInv[16] = {5, 14, 15, 8, 12, 1, 2, 13, 11, 4, 6, 3, 0, 7, 9, 10};
 
 int main(void) {
 
-
-	char ptext[8], Rkey[8], ptexttmp[8], start[8];
-	char Mkey[10], tmpkey[10];
-
-	strcpy(ptext, "barbarro");	
-	strcpy(Mkey, "_S21FEDCBA");
+	uint8_t ptext[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	uint8_t Mkey[10] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+	uint8_t Rkey[8], ptexttmp[8], tmpkey[10];
 
 	int i,j,k;
-	char c, m, b1, b2, B1;
+	uint8_t c, m, b1, b2, B1;
 
 
 	for (j = 0; j < 8; j++) {
-		printf("%x ", (unsigned char)ptext[j]);
+		printf("%02x ", (unsigned char)ptext[j]);
 	}
 	printf("\n");
 
 
-	for (k = 0; k < 32; k++) {
+	for (k = 1; k <= 31; k++) {
 		
 
 		for (j = 0; j < 8; j++) {
@@ -61,7 +59,11 @@ int main(void) {
 		for (j = 0; j < 8; j++) {
 			ptext[j] = Rkey[j] ^ ptext[j];
 		}
-
+		
+/*		printf("ADDROUNDKEY\n");
+for (j = 0; j < 8; j++) {
+		printf("%x ", (unsigned char)ptext[j]);
+	}*/
 		/*BITSLICE: another for loop in which each bit of ptext is xored with the bit of
 		  Mkey in the corresponding position plus 2
 		*/
@@ -71,7 +73,10 @@ int main(void) {
 		for (j = 0; j < 8; j++) {
 			ptext[j] = (Sbox[(int)((ptext[j] & 0xf0) >> 4)] << 4) | (Sbox[(int)(ptext[j] & 0x0f)]);
 		}
-		
+/*printf("SBOX\n");
+for (j = 0; j < 8; j++) {
+		printf("%x ", (unsigned char)ptext[j]);
+	}*/		
 		/*BITSLICE: to be implemented. The position in the Sbox array in which we find the
 		  current Sbox value depends on the input to the Sbox. This is in principle a vulnerability
 		  to cache-based attacks (even though the Sbox here is tiny, 8 byte)
@@ -95,6 +100,10 @@ int main(void) {
 			}
 			ptext[i] = (char)c;
 		}
+/*printf("PBOX\n");
+for (j = 0; j < 8; j++) {
+		printf("%x ", (unsigned char)ptext[j]);
+	}*/
 		/*Apparently the execution time doesn't depend on the input, maybe just on the position of the
 		starting bit, (info leakage from the cache hits/misses?), anyway the representation of the block
 		of plaintext through an array of 64 arrays (each array containing the i-bit of each of 64 consecutive
@@ -148,7 +157,7 @@ int main(void) {
 
 	for (j = 0; j < 8; j++) {
 		ptext[j] = Rkey[j] ^ ptext[j];
-		printf("%x ", (unsigned char)ptext[j]);
+		printf("%02x ", (unsigned char)ptext[j]);
 	}
 	printf("\n");
 
@@ -162,7 +171,7 @@ int main(void) {
 
 
 
-	for (k = 31; k >= 0; k--) {
+	for (k = 31; k >= 1; k--) {
 
 
 		/*--------------------------KEYUPDATE----------------------------*/
@@ -179,7 +188,6 @@ int main(void) {
 			tmpkey[j] = Mkey[j];
 		}
 
-		strcpy(tmpkey, Mkey);
 		for (j = 0; j < 10; j++) {
 			i = (j + 7) % 10;
 
@@ -232,9 +240,9 @@ int main(void) {
 	}
 
 	for (j = 0; j < 8; j++) {
-		printf("%x ", (unsigned char)ptext[j]);
+		printf("%02x ", (unsigned char)ptext[j]);
 	}
-
+printf("\n");
 
 
 	return 0;
